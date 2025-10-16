@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="edu.asu.cse535.cse535_meseretictactoe.RulesTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2025-10-16T16:12:47.409Z" hostname="SANDY" time="0.02">
+  <properties/>
+  <testcase name="ongoingIfNoLossAndSpacesRemain" classname="edu.asu.cse535.cse535_meseretictactoe.RulesTest" time="0.018"/>
+  <testcase name="moverLosesIfTheyCreateThreeInARow" classname="edu.asu.cse535.cse535_meseretictactoe.RulesTest" time="0.0"/>
+  <testcase name="noThreeAndNoEmptyMeansDraw" classname="edu.asu.cse535.cse535_meseretictactoe.RulesTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
