@@ -3,13 +3,10 @@ package edu.asu.cse535.cse535_meseretictactoe
 import kotlin.math.max
 import kotlin.math.min
 
-/** Pair a move index with its Minimax score (from O's perspective). */
+
 data class ScoredMove(val idx: Int, val score: Int)
 
-/**
- * Returns the best move index for the AI (player O) using Minimax + alpha–beta pruning.
- * On a 3×3 board, maxDepth = 9 gives perfect play.
- */
+
 fun bestMoveMisere(state: GameState, maxDepth: Int = 9): Int {
     val legal = state.moves()
     if (legal.isEmpty()) return -1
@@ -35,12 +32,12 @@ fun bestMoveMisere(state: GameState, maxDepth: Int = 9): Int {
         }
         if (score > best.score) best = ScoredMove(m, score)
         alpha = max(alpha, score)
-        if (beta <= alpha) break // alpha–beta prune
+        if (beta <= alpha) break 
     }
     return best.idx
 }
 
-/** Minimax search with alpha–beta pruning (internal so tests in this module can access). */
+
 internal fun minimax(
     state: GameState,
     depth: Int,
@@ -88,7 +85,7 @@ internal fun minimax(
     return best
 }
 
-/** Public helper for tests: score child state from O's perspective. */
+
 fun scoreForO(
     parent: GameState,
     child: GameState,
