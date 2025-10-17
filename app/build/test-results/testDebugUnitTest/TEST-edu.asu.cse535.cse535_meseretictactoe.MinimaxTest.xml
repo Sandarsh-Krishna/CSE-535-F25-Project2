@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="edu.asu.cse535.cse535_meseretictactoe.MinimaxTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2025-10-16T16:12:47.458Z" hostname="SANDY" time="0.009">
-  <properties/>
-  <testcase name="aiPrefersHumanLossOverDraw" classname="edu.asu.cse535.cse535_meseretictactoe.MinimaxTest" time="0.001"/>
-  <testcase name="aiReturnsSomeMoveWhenOnlyOneLeft" classname="edu.asu.cse535.cse535_meseretictactoe.MinimaxTest" time="0.0"/>
-  <testcase name="aiAvoidsImmediateSelfLoss" classname="edu.asu.cse535.cse535_meseretictactoe.MinimaxTest" time="0.008"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
