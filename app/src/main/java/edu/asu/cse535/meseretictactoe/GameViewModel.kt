@@ -29,7 +29,7 @@ class GameViewModel : ViewModel() {
     var settings: GameSettings = GameSettings()
         private set
 
-    /** AI side when applicable, else null. */
+
     val aiSide: Player? get() = if (settings.opponent == Opponent.AI) Player.O else null
 
     init {
@@ -106,7 +106,7 @@ class GameViewModel : ViewModel() {
         }
     }
 
-    // ---------- AI ----------
+
     fun aiMove() {
         val cur = _ui.value.state
         val legal = cur.moves()
@@ -134,7 +134,7 @@ class GameViewModel : ViewModel() {
         return (safe.ifEmpty { legal }).random()
     }
 
-    // ----- Minimax with memo (perfect play) -----
+
     private val memo = HashMap<Pair<List<Cell>, Player>, Int>()
 
     private fun hardMove(state: GameState): Int {

@@ -153,7 +153,7 @@ fun WhoGoesFirstScreen(
     }
 }
 
-/** A compact option with a square indicator that fills when selected. */
+
 @Composable
 private fun SquareOption(text: String, selected: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)

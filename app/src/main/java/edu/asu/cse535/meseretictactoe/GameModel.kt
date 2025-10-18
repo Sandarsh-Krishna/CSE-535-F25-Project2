@@ -27,7 +27,7 @@ object MisereRules {
     private fun hasThree(board: List<Cell>, c: Cell): Boolean =
         LINES.any { (a,b,c2) -> board[a]==c && board[b]==c && board[c2]==c }
 
-    /** Outcome after the last move, made by [mover]. */
+
     fun outcomeAfter(state: GameState, mover: Player): Outcome {
         val mc = if (mover == Player.X) Cell.X else Cell.O
         if (hasThree(state.board, mc)) {

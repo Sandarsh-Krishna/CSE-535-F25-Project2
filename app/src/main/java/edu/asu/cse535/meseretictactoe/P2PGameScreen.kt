@@ -68,7 +68,7 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
         if (granted) bonded = BluetoothP2P.bondedDevices(ctx)
     }
 
-    // Navigate to board when connected
+
     LaunchedEffect(Unit) {
         P2PSession.connected.collect { ok ->
             if (ok) {

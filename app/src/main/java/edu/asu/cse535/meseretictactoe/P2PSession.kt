@@ -26,7 +26,7 @@ object P2PSession {
     private val _incoming = MutableSharedFlow<String>(extraBufferCapacity = 32)
     val incoming = _incoming.asSharedFlow()
 
-    /** Host waits for an incoming RFCOMM socket. Safe against missing permission. */
+
     @SuppressLint("MissingPermission") // guarded and try/catch SecurityException
     fun host(ctx: Context) {
         val ad = BluetoothP2P.adapter(ctx) ?: return
@@ -47,7 +47,7 @@ object P2PSession {
         }
     }
 
-    /** Join connects to a specific bonded device address. Safe against missing permission. */
+
     @SuppressLint("MissingPermission") // guarded and try/catch SecurityException
     fun join(ctx: Context, address: String) {
         val ad = BluetoothP2P.adapter(ctx) ?: return

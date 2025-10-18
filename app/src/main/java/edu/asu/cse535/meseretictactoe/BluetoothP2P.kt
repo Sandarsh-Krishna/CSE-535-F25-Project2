@@ -37,7 +37,7 @@ object BluetoothP2P {
             ContextCompat.checkSelfPermission(ctx, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
         else true
 
-    /** Returns list of paired devices as (address, name). Empty if CONNECT permission missing. */
+
     @SuppressLint("MissingPermission") // guarded by hasConnectPermission
     fun bondedDevices(ctx: Context): List<Pair<String, String>> {
         if (!hasConnectPermission(ctx)) return emptyList()

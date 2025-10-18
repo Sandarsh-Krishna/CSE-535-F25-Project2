@@ -74,7 +74,7 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
 
             Spacer(Modifier.height(16.dp))
 
-            // Only show a message when the game is finished
+
             if (ui.outcome != Outcome.ONGOING) {
                 Text(
                     text = when (ui.outcome) {
