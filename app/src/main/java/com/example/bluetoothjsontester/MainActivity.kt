@@ -21,9 +21,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
-import com.google.gson.Gson
-import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,11 +29,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var listView: ListView
     private lateinit var tvStatus: TextView
     private lateinit var tvLog: TextView
-    private lateinit var etMac: EditText
     private lateinit var etJson: EditText
     private lateinit var deviceAdapter: ArrayAdapter<String>
     private val deviceList = mutableListOf<BluetoothDevice>()
-    private lateinit var gameHistoryDao: GameHistoryDao
 
     private var connection: BluetoothConnection? = null
 
@@ -50,38 +45,9 @@ class MainActivity : AppCompatActivity() {
         listView = findViewById(R.id.listDevices)
         tvStatus = findViewById(R.id.tvStatus)
         tvLog = findViewById(R.id.tvLog)
-        etMac = findViewById(R.id.etMac)
         etJson = findViewById(R.id.etJson)
         deviceAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1)
         listView.adapter = deviceAdapter
-        gameHistoryDao = AppDatabase.getDatabase(this).gameHistoryDao()
-
-        etJson.setText(
-            """{ 
-  "gameState": {
-    "board": [
-      ["X", "O", "X"],
-      ["O", "X", "O"],
-      ["X", " ", " "]
-    ],
-    "turn": "7",
-    "winner": "Player 1 MAC Address",
-    "draw": false,
-    "connectionEstablished": true,
-    "reset": false
-  },
-  "metadata": {
-    "choices": [
-      {"id": "player1", "name": "Player 1 MAC Address"},
-      {"id": "player2", "name": "Player 2 MAC Address"}
-    ],
-    "miniGame": {
-      "player1Choice": "Player 1 MAC Address",
-      "player2Choice": ""
-    }
-  }
-}"""
-        )
 
         // Permissions
         checkAndRequestBluetoothPermissions()
@@ -112,27 +78,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<Button>(R.id.btnHistory).setOnClickListener {
-            startActivity(Intent(this, HistoryActivity::class.java))
-        }
-
         listView.setOnItemClickListener { _, _, position, _ ->
             val device = deviceList[position]
-            etMac.setText(device.address)
-            Toast.makeText(this, "Selected ${device.name}", Toast.LENGTH_SHORT).show()
+            connectTo(device.address)
         }
 
         findViewById<Button>(R.id.btnHost).setOnClickListener {
             startServer()
-        }
-
-        findViewById<Button>(R.id.btnConnect).setOnClickListener {
-            val mac = etMac.text.toString().trim()
-            if (mac.isNotEmpty()) {
-                connectTo(mac)
-            } else {
-                Toast.makeText(this, "Please enter MAC address", Toast.LENGTH_SHORT).show()
-            }
         }
 
         findViewById<Button>(R.id.btnSendJson).setOnClickListener {
@@ -213,7 +165,6 @@ class MainActivity : AppCompatActivity() {
             onMessageReceived = { message ->
                 runOnUiThread {
                     appendLog("Received: $message")
-                    saveGameData(message)
                 }
             }
         )
@@ -236,20 +187,6 @@ class MainActivity : AppCompatActivity() {
         }
         client.connect()
         appendLog("Connecting to $mac ...")
-    }
-
-    private fun saveGameData(jsonString: String) {
-        lifecycleScope.launch {
-            try {
-                val gson = Gson()
-                val gameData = gson.fromJson(jsonString, GameState::class.java)
-                val gameHistory = GameHistory(winner = gameData.gameState.winner, board = gson.toJson(gameData.gameState.board))
-                gameHistoryDao.insert(gameHistory)
-                appendLog("Game history saved.")
-            } catch (e: Exception) {
-                appendLog("Error saving game data: ${e.message}")
-            }
-        }
     }
 
     // --------------------------------------------------------------------------------------------
@@ -339,9 +276,4 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {
         }
     }
-
-    data class GameState(val gameState: Game, val metadata: Metadata)
-    data class Game(val board: List<List<String>>, val winner: String)
-    data class Metadata(val miniGame: MiniGame)
-    data class MiniGame(val player1Choice: String, val player2Choice: String)
 }
