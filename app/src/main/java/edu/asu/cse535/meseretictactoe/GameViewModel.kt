@@ -14,7 +14,7 @@ enum class Opponent { AI, HUMAN_LOCAL, HUMAN_BT }
 data class GameSettings(
     val opponent: Opponent = Opponent.AI,
     val difficulty: Difficulty = Difficulty.EASY,
-    val starter: Player = Player.X // honored for Two Players; forced X for AI
+    val starter: Player = Player.X
 )
 
 data class UiState(
@@ -33,7 +33,7 @@ class GameViewModel : ViewModel() {
     val aiSide: Player? get() = if (settings.opponent == Opponent.AI) Player.O else null
 
     init {
-        // Listen to peer messages and apply them
+
         viewModelScope.launch {
             P2PSession.incoming.collectLatest { msg ->
                 when {

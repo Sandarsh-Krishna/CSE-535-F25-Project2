@@ -85,25 +85,21 @@ fun PastGameScreen(nav: NavHostController) {
                     items(items) { game ->
                         OutlinedCard {
                             Column(Modifier.padding(16.dp)) {
-                                // If your data field name differs, change 'timeMillis' below
                                 Text(fmt.format(Date(game.timeMillis)))
                                 Spacer(Modifier.height(6.dp))
 
                                 Row {
                                     Text("Difficulty: ", fontWeight = FontWeight.Bold)
-                                    // If your data field name differs, change 'difficulty' below
                                     Text(game.difficulty.name)
                                 }
                                 Spacer(Modifier.height(2.dp))
                                 Row {
                                     Text("Outcome: ", fontWeight = FontWeight.Bold)
-                                    // If your data field name differs, change 'outcome' below
                                     Text(
                                         when (game.outcome) {
                                             Outcome.DRAW -> "Draw"
                                             Outcome.X_LOSES -> "Computer wins"
                                             Outcome.O_LOSES -> "You win"
-                                            // In case ONGOING ever appears in history
                                             Outcome.ONGOING -> "Ongoing"
                                         }
                                     )

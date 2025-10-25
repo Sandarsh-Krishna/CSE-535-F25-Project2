@@ -181,7 +181,7 @@ fun WhoGoesFirstScreen(
     }
 }
 
-/** Filled-square option pill */
+
 @Composable
 private fun SquareOption(text: String, selected: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)

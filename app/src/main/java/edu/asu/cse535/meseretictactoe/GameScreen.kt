@@ -176,7 +176,7 @@ private fun TurnChip(player: Player) {
     }
 }
 
-/** Identical color and **equal-sized** tiles using available width. */
+
 @Composable
 private fun Board(board: List<Cell>, enabled: Boolean, onTap: (Int) -> Unit) {
     val tileColor = Color(0xFFF5F3FF) // single pastel for every tile
@@ -249,7 +249,7 @@ private fun Tile(label: String, color: Color, canTap: Boolean, size: Dp, onTap: 
 
 @Composable
 private fun ResultBanner(outcome: Outcome, opponent: Opponent) {
-    // Map AI results to friendly text
+
     val friendly = when {
         opponent == Opponent.AI && outcome == Outcome.X_LOSES -> "Computer wins"
         opponent == Opponent.AI && outcome == Outcome.O_LOSES -> "You win"

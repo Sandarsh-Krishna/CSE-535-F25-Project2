@@ -11,7 +11,7 @@ import androidx.core.content.ContextCompat
 import java.util.UUID
 
 object BluetoothP2P {
-    // Shared UUID for classic RFCOMM SPP
+
     val APP_UUID: UUID = UUID.fromString("c4b2b2d4-7c09-4f9f-9c1c-0f3c2a3f43c9")
     const val SERVICE_NAME = "MesereTTT"
 
