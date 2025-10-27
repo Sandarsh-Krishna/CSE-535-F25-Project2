@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 enum class TwoPlayerMode { LOCAL, BLUETOOTH }
@@ -50,11 +51,17 @@ fun WhoGoesFirstScreen(
 ) {
     var opponent by remember { mutableStateOf(current.opponent) }
     var difficulty by remember { mutableStateOf(current.difficulty) }
-    var starter by remember { mutableStateOf(current.starter) } // for two-player modes
     var diffMenuExpanded by remember { mutableStateOf(false) }
-    var tpMode by remember { mutableStateOf(if (current.opponent == Opponent.HUMAN_BT) TwoPlayerMode.BLUETOOTH else TwoPlayerMode.LOCAL) }
 
-    // Same gradient as GameScreen
+    var tpMode by remember {
+        mutableStateOf(
+            if (current.opponent == Opponent.HUMAN_BT)
+                TwoPlayerMode.BLUETOOTH
+            else
+                TwoPlayerMode.LOCAL
+        )
+    }
+
     val bg = Brush.linearGradient(
         0f to Color(0xFFFEF3C7),
         0.5f to Color(0xFFE9D5FF),
@@ -62,7 +69,11 @@ fun WhoGoesFirstScreen(
     )
 
     Scaffold(
-        topBar = { TopAppBar(title = { }) }, // title is in content on GameScreen; keep empty here
+        topBar = {
+            TopAppBar(
+                title = { /* title rendered below */ }
+            )
+        },
         containerColor = Color.Transparent
     ) { pad ->
         Box(
@@ -77,6 +88,7 @@ fun WhoGoesFirstScreen(
                     .padding(horizontal = 24.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
                 Text("Select Mode", style = MaterialTheme.typography.titleLarge)
 
                 Spacer(Modifier.height(12.dp))
@@ -85,15 +97,28 @@ fun WhoGoesFirstScreen(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+                    horizontalArrangement = Arrangement.spacedBy(
+                        16.dp,
+                        Alignment.CenterHorizontally
+                    ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SquareOption("AI", opponent == Opponent.AI) { opponent = Opponent.AI }
                     SquareOption(
-                        "Two Players",
-                        opponent == Opponent.HUMAN_LOCAL || opponent == Opponent.HUMAN_BT
+                        text = "AI",
+                        selected = (opponent == Opponent.AI)
                     ) {
-                        opponent = if (tpMode == TwoPlayerMode.BLUETOOTH) Opponent.HUMAN_BT else Opponent.HUMAN_LOCAL
+                        opponent = Opponent.AI
+                    }
+
+                    SquareOption(
+                        text = "Two Players",
+                        selected = (opponent == Opponent.HUMAN_LOCAL || opponent == Opponent.HUMAN_BT)
+                    ) {
+                        opponent =
+                            if (tpMode == TwoPlayerMode.BLUETOOTH)
+                                Opponent.HUMAN_BT
+                            else
+                                Opponent.HUMAN_LOCAL
                     }
                 }
 
@@ -113,67 +138,138 @@ fun WhoGoesFirstScreen(
                                 Difficulty.MEDIUM -> "Medium"
                                 Difficulty.HARD -> "Hard"
                             }
+
                             OutlinedTextField(
                                 value = label,
                                 onValueChange = {},
                                 readOnly = true,
                                 label = { Text("Select difficulty") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = diffMenuExpanded) },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = diffMenuExpanded
+                                    )
+                                },
                                 modifier = Modifier
-                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                                    .menuAnchor(
+                                        type = MenuAnchorType.PrimaryNotEditable,
+                                        enabled = true
+                                    )
                                     .widthIn(min = 220.dp)
                             )
+
                             ExposedDropdownMenu(
                                 expanded = diffMenuExpanded,
                                 onDismissRequest = { diffMenuExpanded = false }
                             ) {
-                                DropdownMenuItem(text = { Text("Easy") }, onClick = { difficulty = Difficulty.EASY; diffMenuExpanded = false })
-                                DropdownMenuItem(text = { Text("Medium") }, onClick = { difficulty = Difficulty.MEDIUM; diffMenuExpanded = false })
-                                DropdownMenuItem(text = { Text("Hard") }, onClick = { difficulty = Difficulty.HARD; diffMenuExpanded = false })
+                                DropdownMenuItem(
+                                    text = { Text("Easy") },
+                                    onClick = {
+                                        difficulty = Difficulty.EASY
+                                        diffMenuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Medium") },
+                                    onClick = {
+                                        difficulty = Difficulty.MEDIUM
+                                        diffMenuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Hard") },
+                                    onClick = {
+                                        difficulty = Difficulty.HARD
+                                        diffMenuExpanded = false
+                                    }
+                                )
                             }
                         }
                     }
+
                     Spacer(Modifier.height(8.dp))
-                    Text("You will play as X and go first.", color = MaterialTheme.colorScheme.secondary)
+
+                    Text(
+                        "You will play as X and go first.",
+                        color = MaterialTheme.colorScheme.secondary,
+                        textAlign = TextAlign.Center
+                    )
                 } else {
                     Text("How do you want to play?", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(12.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+                        horizontalArrangement = Arrangement.spacedBy(
+                            16.dp,
+                            Alignment.CenterHorizontally
+                        )
                     ) {
-                        SquareOption("Same Device", tpMode == TwoPlayerMode.LOCAL) {
+                        SquareOption(
+                            text = "Same Device",
+                            selected = (tpMode == TwoPlayerMode.LOCAL)
+                        ) {
                             tpMode = TwoPlayerMode.LOCAL
                             opponent = Opponent.HUMAN_LOCAL
                         }
-                        SquareOption("Bluetooth", tpMode == TwoPlayerMode.BLUETOOTH) {
+
+                        SquareOption(
+                            text = "Bluetooth",
+                            selected = (tpMode == TwoPlayerMode.BLUETOOTH)
+                        ) {
                             tpMode = TwoPlayerMode.BLUETOOTH
                             opponent = Opponent.HUMAN_BT
                         }
                     }
 
                     Spacer(Modifier.height(20.dp))
-                    Text("Who goes first?", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        SquareOption("X", selected = starter == Player.X) { starter = Player.X }
-                        SquareOption("O", selected = starter == Player.O) { starter = Player.O }
-                    }
+
+
+                    val message =
+                        if (tpMode == TwoPlayerMode.LOCAL) {
+                            "X plays first"
+                        } else {
+                            "Host plays first as X"
+                        }
+
+                    Text(
+                        message,
+                        color = MaterialTheme.colorScheme.secondary,
+                        textAlign = TextAlign.Center
+                    )
                 }
 
                 Spacer(Modifier.height(32.dp))
-                Button(onClick = {
-                    val settings = when (opponent) {
-                        Opponent.AI -> GameSettings(opponent = Opponent.AI, difficulty = difficulty, starter = Player.X)
-                        Opponent.HUMAN_LOCAL -> GameSettings(opponent = Opponent.HUMAN_LOCAL, difficulty = difficulty, starter = starter)
-                        Opponent.HUMAN_BT -> GameSettings(opponent = Opponent.HUMAN_BT, difficulty = difficulty, starter = starter)
-                    }
-                    onApply(settings)
-                }, shape = RoundedCornerShape(16.dp)) {
+
+                Button(
+                    onClick = {
+
+                        val settings = when (opponent) {
+                            Opponent.AI -> GameSettings(
+                                opponent = Opponent.AI,
+                                difficulty = difficulty,
+                                starter = Player.X,
+                                localSide = Player.X
+                            )
+
+                            Opponent.HUMAN_LOCAL -> GameSettings(
+                                opponent = Opponent.HUMAN_LOCAL,
+                                difficulty = difficulty,
+                                starter = Player.X,
+                                localSide = Player.X
+                            )
+
+                            Opponent.HUMAN_BT -> GameSettings(
+                                opponent = Opponent.HUMAN_BT,
+                                difficulty = difficulty,
+                                starter = Player.X,
+                                localSide = Player.X
+                            )
+                        }
+
+                        onApply(settings)
+                    },
+                    shape = RoundedCornerShape(16.dp)
+                ) {
                     Text("Start")
                 }
             }
@@ -181,9 +277,12 @@ fun WhoGoesFirstScreen(
     }
 }
 
-
 @Composable
-private fun SquareOption(text: String, selected: Boolean, onClick: () -> Unit) {
+private fun SquareOption(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
     val shape = RoundedCornerShape(12.dp)
     Surface(
         modifier = Modifier
@@ -192,8 +291,11 @@ private fun SquareOption(text: String, selected: Boolean, onClick: () -> Unit) {
         shape = shape,
         tonalElevation = if (selected) 2.dp else 0.dp,
         shadowElevation = 0.dp,
-        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-        else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        border =
+            if (selected)
+                BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+            else
+                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -210,8 +312,11 @@ private fun SquareOption(text: String, selected: Boolean, onClick: () -> Unit) {
                     )
                     .border(
                         width = 1.dp,
-                        color = if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outlineVariant,
+                        color =
+                            if (selected)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.outlineVariant,
                         shape = RoundedCornerShape(4.dp)
                     )
             )

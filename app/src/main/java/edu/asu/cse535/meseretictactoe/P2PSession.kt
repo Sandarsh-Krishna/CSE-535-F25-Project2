@@ -17,10 +17,15 @@ import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.Socket
 
+
 object P2PSession {
     private var btSocket: BluetoothSocket? = null
     private var netSocket: Socket? = null
     private var writer: PrintWriter? = null
+
+
+    var amHost: Boolean? = null
+        private set
 
     private val _connected = MutableStateFlow(false)
     val connected = _connected.asStateFlow()
@@ -28,13 +33,14 @@ object P2PSession {
     private val _incoming = MutableSharedFlow<String>(extraBufferCapacity = 32)
     val incoming = _incoming.asSharedFlow()
 
-
     private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val errors = _errors.asSharedFlow()
 
     // ---------- Bluetooth ----------
+
     @SuppressLint("MissingPermission")
     fun host(ctx: Context) {
+        amHost = true // I'm hosting, I will be X
         val ad = BluetoothP2P.adapter(ctx) ?: return
         if (!BluetoothP2P.hasConnectPermission(ctx)) return
         CoroutineScope(Dispatchers.IO).launch {
@@ -56,6 +62,7 @@ object P2PSession {
 
     @SuppressLint("MissingPermission")
     fun join(ctx: Context, address: String) {
+        amHost = false // I'm joining, I will be O
         val ad = BluetoothP2P.adapter(ctx) ?: return
         if (!BluetoothP2P.hasConnectPermission(ctx)) return
         CoroutineScope(Dispatchers.IO).launch {
@@ -90,8 +97,10 @@ object P2PSession {
         _connected.value = true
     }
 
+    // ---------- LAN ----------
 
     fun hostLan() {
+        amHost = true
         NetP2P.host(
             onSocket = { s -> onNetSocketReady(s) },
             onError = { t ->
@@ -102,10 +111,11 @@ object P2PSession {
     }
 
     fun joinLan(ip: String) {
+        amHost = false
         NetP2P.join(
             ip = ip,
             onSocket = { s -> onNetSocketReady(s) },
-            onError = { t ->
+            onError = { _ ->
                 _connected.value = false
                 _errors.tryEmit("Cannot connect to $ip")
             }
@@ -118,8 +128,11 @@ object P2PSession {
         _connected.value = true
     }
 
+    // ---------- Messaging ----------
 
-    fun send(line: String) { writer?.println(line) }
+    fun send(line: String) {
+        writer?.println(line)
+    }
 
     @Suppress("unused")
     fun close() {
@@ -129,6 +142,7 @@ object P2PSession {
         btSocket = null
         netSocket = null
         writer = null
+        amHost = null
         _connected.value = false
     }
 }

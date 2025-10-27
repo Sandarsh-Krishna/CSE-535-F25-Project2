@@ -62,10 +62,11 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
 
     Scaffold(
         topBar = {
-            // Buttons only; title is centered in the content below
             TopAppBar(
                 title = {},
-                navigationIcon = { TextButton(onClick = { nav.goBack() }) { Text("Back") } },
+                navigationIcon = {
+                    TextButton(onClick = { nav.goBack() }) { Text("Back") }
+                },
                 actions = {
                     TextButton(onClick = { nav.navigate(AppRoute.PAST.name) }) { Text("Past") }
                     TextButton(onClick = { nav.navigate(AppRoute.MODE_SELECT.name) }) { Text("Mode") }
@@ -95,7 +96,6 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
                     modifier = Modifier.padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Centered title BELOW the app bar
                     Text(
                         "Misère Tic-Tac-Toe",
                         fontSize = 22.sp,
@@ -104,30 +104,51 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
                     )
 
                     Spacer(Modifier.height(12.dp))
+
                     ModePill(settings)
 
+
+                    if (settings.opponent == Opponent.HUMAN_BT) {
+                        Spacer(Modifier.height(8.dp))
+                        val me = settings.localSide
+                        val them = if (me == Player.X) Player.O else Player.X
+                        Text(
+                            text = "You are $me • Opponent is $them",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
                     Spacer(Modifier.height(12.dp))
+
                     TurnChip(player = ui.state.playerToMove)
 
                     Spacer(Modifier.height(16.dp))
 
                     Board(
                         board = ui.state.board,
-                        enabled = ui.outcome == Outcome.ONGOING &&
-                                (aiSide == null || ui.state.playerToMove != aiSide)
+                        enabled =
+                            ui.outcome == Outcome.ONGOING &&
+                                    // if AI mode: block taps when it's AI's turn
+                                    (aiSide == null || ui.state.playerToMove != aiSide) &&
+                                    // if BT mode: block taps when it's not MY turn
+                                    (settings.opponent != Opponent.HUMAN_BT ||
+                                            ui.state.playerToMove == settings.localSide)
                     ) { vm.tap(it) }
 
                     Spacer(Modifier.height(16.dp))
 
-                    if (ui.outcome != Outcome.ONGOING) {
-                        ResultBanner(ui.outcome, settings.opponent)
-                        Spacer(Modifier.height(12.dp))
-                    }
+                    ResultBanner(ui.outcome, settings.opponent)
+
+                    Spacer(Modifier.height(12.dp))
 
                     ElevatedButton(
                         onClick = { vm.reset() },
-                        shape = RoundedCornerShape(16.dp) // rounded rectangle
-                    ) { Text("New Game") }
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("New Game")
+                    }
                 }
             }
         }
@@ -137,10 +158,15 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
 @Composable
 private fun ModePill(settings: GameSettings) {
     val label = when (settings.opponent) {
-        Opponent.AI -> "AI • ${settings.difficulty.name.lowercase().replaceFirstChar { it.uppercase() }} • You’re X"
+        Opponent.AI -> {
+            val diff = settings.difficulty.name.lowercase()
+                .replaceFirstChar { it.uppercase() }
+            "AI • $diff • You’re X"
+        }
         Opponent.HUMAN_LOCAL -> "Two Players • Same Device"
         Opponent.HUMAN_BT -> "Two Players • Bluetooth"
     }
+
     Surface(
         shape = RoundedCornerShape(999.dp),
         color = Color(0xFFDCFCE7),
@@ -176,17 +202,19 @@ private fun TurnChip(player: Player) {
     }
 }
 
-
 @Composable
-private fun Board(board: List<Cell>, enabled: Boolean, onTap: (Int) -> Unit) {
-    val tileColor = Color(0xFFF5F3FF) // single pastel for every tile
+private fun Board(
+    board: List<Cell>,
+    enabled: Boolean,
+    onTap: (Int) -> Unit
+) {
+    val tileColor = Color(0xFFF5F3FF)
     val gap = 12.dp
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
-        // 3 tiles per row -> 2 gaps between tiles
         val tileSize: Dp = (maxWidth - gap * 2) / 3
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -197,7 +225,11 @@ private fun Board(board: List<Cell>, enabled: Boolean, onTap: (Int) -> Unit) {
                 ) {
                     for (c in 0 until 3) {
                         val idx = r * 3 + c
-                        val label = when (board[idx]) { Cell.X -> "X"; Cell.O -> "O"; Cell.EMPTY -> "" }
+                        val label = when (board[idx]) {
+                            Cell.X -> "X"
+                            Cell.O -> "O"
+                            Cell.EMPTY -> ""
+                        }
                         Tile(
                             label = label,
                             color = tileColor,
@@ -213,30 +245,55 @@ private fun Board(board: List<Cell>, enabled: Boolean, onTap: (Int) -> Unit) {
 }
 
 @Composable
-private fun Tile(label: String, color: Color, canTap: Boolean, size: Dp, onTap: () -> Unit) {
+private fun Tile(
+    label: String,
+    color: Color,
+    canTap: Boolean,
+    size: Dp,
+    onTap: () -> Unit
+) {
     val interaction = remember { MutableInteractionSource() }
     var pressed by remember { mutableStateOf(false) }
+
     LaunchedEffect(interaction) {
         interaction.interactions.collect { evt ->
             when (evt) {
                 is PressInteraction.Press -> pressed = true
-                is PressInteraction.Release, is PressInteraction.Cancel -> pressed = false
+                is PressInteraction.Release,
+                is PressInteraction.Cancel -> pressed = false
             }
         }
     }
+
     val scale = if (pressed) 0.98f else 1f
 
     OutlinedCard(
         modifier = Modifier
-            .size(size) // <- equal size from layout calculation
+            .size(size)
             .scale(scale)
-            .let { if (canTap) it.clickable(interactionSource = interaction, indication = null) { onTap() } else it },
+            .let {
+                if (canTap) {
+                    it.clickable(
+                        interactionSource = interaction,
+                        indication = null
+                    ) { onTap() }
+                } else it
+            },
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(2.dp, Color.White.copy(alpha = 0.8f)),
-        colors = CardDefaults.outlinedCardColors(containerColor = color.copy(alpha = 0.95f))
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = color.copy(alpha = 0.95f)
+        )
     ) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            val txtColor = if (label == "X") Color(0xFFEF4444) else Color(0xFF3B82F6)
+        Box(
+            Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            val txtColor = if (label == "X")
+                Color(0xFFEF4444)
+            else
+                Color(0xFF3B82F6)
+
             Text(
                 text = label,
                 fontSize = 36.sp,
@@ -248,14 +305,21 @@ private fun Tile(label: String, color: Color, canTap: Boolean, size: Dp, onTap: 
 }
 
 @Composable
-private fun ResultBanner(outcome: Outcome, opponent: Opponent) {
+private fun ResultBanner(
+    outcome: Outcome,
+    opponent: Opponent
+) {
 
     val friendly = when {
         opponent == Opponent.AI && outcome == Outcome.X_LOSES -> "Computer wins"
         opponent == Opponent.AI && outcome == Outcome.O_LOSES -> "You win"
+
         outcome == Outcome.DRAW -> "Result: Draw"
-        outcome == Outcome.X_LOSES -> "Result: X loses"
-        outcome == Outcome.O_LOSES -> "Result: O loses"
+
+
+        outcome == Outcome.X_LOSES -> "Result: O wins"
+        outcome == Outcome.O_LOSES -> "Result: X wins"
+
         else -> ""
     }
 
@@ -271,7 +335,9 @@ private fun ResultBanner(outcome: Outcome, opponent: Opponent) {
             shape = RoundedCornerShape(12.dp),
             color = bg,
             contentColor = fg,
-            border = if (bg != Color.Transparent) BorderStroke(1.dp, fg.copy(alpha = 0.25f)) else null
+            border = if (bg != Color.Transparent)
+                BorderStroke(1.dp, fg.copy(alpha = 0.25f))
+            else null
         ) {
             Text(
                 text = friendly,

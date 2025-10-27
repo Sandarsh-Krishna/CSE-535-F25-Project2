@@ -50,15 +50,21 @@ import androidx.navigation.NavHostController
 
 enum class ConnectMode { BLUETOOTH, LAN }
 
-@Suppress("UNUSED_PARAMETER")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
+fun P2PGameScreen(
+    nav: NavHostController,
+    gameVm: GameViewModel,      // <-- main gameplay VM
+    p2pVm: P2PGameViewModel     // <-- keep if you still use it elsewhere
+) {
     val ctx = LocalContext.current
 
     val permissionList = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT
+            )
         } else {
             arrayOf(
                 Manifest.permission.BLUETOOTH,
@@ -68,16 +74,24 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
         }
     }
 
-
     var showPermDialog by remember { mutableStateOf(false) }
-    var granted by remember { mutableStateOf(BluetoothP2P.hasAllPermissions(ctx, permissionList)) }
+    var granted by remember {
+        mutableStateOf(
+            BluetoothP2P.hasAllPermissions(ctx, permissionList)
+        )
+    }
     var status by remember { mutableStateOf("Not connected") }
 
     var showJoinPicker by remember { mutableStateOf(false) }
     var bonded by remember { mutableStateOf(BluetoothP2P.bondedDevices(ctx)) }
 
     var mode by remember {
-        mutableStateOf(if (BluetoothP2P.adapter(ctx) == null) ConnectMode.LAN else ConnectMode.BLUETOOTH)
+        mutableStateOf(
+            if (BluetoothP2P.adapter(ctx) == null)
+                ConnectMode.LAN
+            else
+                ConnectMode.BLUETOOTH
+        )
     }
 
     var joinIp by remember { mutableStateOf("") }
@@ -85,16 +99,30 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
     var isJoining by remember { mutableStateOf(false) }
     var errorText by remember { mutableStateOf<String?>(null) }
 
-    // Listen for connection + error events from the session
+
     LaunchedEffect(Unit) {
         P2PSession.connected.collect { ok ->
             if (ok) {
                 isJoining = false
                 status = "Connected"
+
+
+                val newSettings = GameSettings(
+                    opponent = Opponent.HUMAN_BT,
+                    difficulty = Difficulty.EASY,
+                    starter = Player.X,
+                    localSide = Player.X
+                )
+
+
+                gameVm.applySettings(newSettings)
+
+
                 nav.navigate(AppRoute.MAIN.name)
             }
         }
     }
+
     LaunchedEffect(Unit) {
         P2PSession.errors.collect { msg ->
             isJoining = false
@@ -107,9 +135,10 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
     ) { result ->
         granted = result.values.all { it }
         showPermDialog = false
-        if (granted) bonded = BluetoothP2P.bondedDevices(ctx)
+        if (granted) {
+            bonded = BluetoothP2P.bondedDevices(ctx)
+        }
     }
-
 
     val bg = Brush.linearGradient(
         0f to Color(0xFFFEF3C7),
@@ -121,7 +150,9 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
         topBar = {
             TopAppBar(
                 title = {},
-                navigationIcon = { TextButton(onClick = { nav.goBack() }) { Text("Back") } }
+                navigationIcon = {
+                    TextButton(onClick = { nav.goBack() }) { Text("Back") }
+                }
             )
         },
         containerColor = Color.Transparent
@@ -140,7 +171,11 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
                     .imePadding(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Two Players", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                Text(
+                    "Two Players",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold
+                )
                 Spacer(Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -170,11 +205,17 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Button(
-                                onClick = { status = "Hosting…"; P2PSession.host(ctx) },
+                                onClick = {
+                                    status = "Hosting…"
+                                    // Hosting: this device will become X and go first
+                                    P2PSession.host(ctx)
+                                },
                                 shape = RoundedCornerShape(16.dp),
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("Host") }
+                            ) { Text("Host (You will be X)") }
+
                             Spacer(Modifier.height(12.dp))
+
                             Button(
                                 onClick = {
                                     bonded = BluetoothP2P.bondedDevices(ctx)
@@ -182,23 +223,24 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
                                 },
                                 shape = RoundedCornerShape(16.dp),
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("Join") }
+                            ) { Text("Join (You will be O)") }
                         }
                     }
                 } else {
-                    // -------- LAN UI (stacked vertically, always visible) --------
+                    // LAN mode
                     Text("Your IP (host shares this): $myIp")
                     Spacer(Modifier.height(12.dp))
 
                     Button(
                         onClick = {
                             status = "Hosting on $myIp…"
+                            // Host on LAN -> will be X / goes first
                             P2PSession.hostLan()
                         },
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isJoining
-                    ) { Text("Host") }
+                    ) { Text("Host (You will be X)") }
 
                     Spacer(Modifier.height(12.dp))
 
@@ -218,18 +260,27 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
                         onClick = {
                             val ip = joinIp.trim()
                             val ipv4 = Regex("""\b\d{1,3}(\.\d{1,3}){3}\b""")
-                            if (ip.isEmpty() || !ipv4.matches(ip) || ip == "127.0.0.1" || ip == "0.0.0.0") {
-                                errorText = "Enter a valid IPv4 address on your Wi-Fi (e.g., 192.168.x.y)."
+                            if (
+                                ip.isEmpty() ||
+                                !ipv4.matches(ip) ||
+                                ip == "127.0.0.1" ||
+                                ip == "0.0.0.0"
+                            ) {
+                                errorText =
+                                    "Enter a valid IPv4 address on your Wi-Fi (e.g. 192.168.x.y)."
                             } else {
                                 isJoining = true
                                 status = "Joining $ip…"
+                                // Join on LAN -> will be O / goes second
                                 P2PSession.joinLan(ip)
                             }
                         },
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isJoining
-                    ) { Text(if (isJoining) "Joining…" else "Join") }
+                    ) {
+                        Text(if (isJoining) "Joining…" else "Join (You will be O)")
+                    }
                 }
             }
         }
@@ -242,13 +293,21 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
             title = { Text("Bluetooth permission required") },
             text = { Text("Allow Mesere tic tac toe to connect to nearby bluetooth devices") },
             confirmButton = {
-                TextButton(onClick = { showPermDialog = false; launcher.launch(permissionList) }) {
-                    Text("Allow")
-                }
+                TextButton(
+                    onClick = {
+                        showPermDialog = false
+                        launcher.launch(permissionList)
+                    }
+                ) { Text("Allow") }
             },
-            dismissButton = { TextButton(onClick = { showPermDialog = false }) { Text("Cancel") } }
+            dismissButton = {
+                TextButton(onClick = { showPermDialog = false }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
+
 
     if (showJoinPicker) {
         AlertDialog(
@@ -258,7 +317,11 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
                 if (bonded.isEmpty()) {
                     Text("No paired devices found. Pair in system Bluetooth settings first.")
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp)
+                    ) {
                         items(bonded) { dev ->
                             ListItem(
                                 headlineContent = { Text(dev.second) },
@@ -268,6 +331,7 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
                                     .clickable {
                                         showJoinPicker = false
                                         status = "Connecting to ${dev.second}…"
+                                        // Joining => this device will be O / second
                                         P2PSession.join(ctx, dev.first)
                                     }
                             )
@@ -275,17 +339,23 @@ fun P2PGameScreen(nav: NavHostController, vm: P2PGameViewModel) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showJoinPicker = false }) { Text("Close") } }
+            confirmButton = {
+                TextButton(onClick = { showJoinPicker = false }) {
+                    Text("Close")
+                }
+            }
         )
     }
 
-    // Error popup for wrong IP / network failures
+
     if (errorText != null) {
         AlertDialog(
             onDismissRequest = { errorText = null },
             title = { Text("Connection problem") },
             text = { Text(errorText!!) },
-            confirmButton = { TextButton(onClick = { errorText = null }) { Text("OK") } }
+            confirmButton = {
+                TextButton(onClick = { errorText = null }) { Text("OK") }
+            }
         )
     }
 }
