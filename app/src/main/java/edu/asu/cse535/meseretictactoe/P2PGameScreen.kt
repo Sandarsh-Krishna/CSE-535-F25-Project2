@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,19 +18,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -45,10 +46,198 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 
 enum class ConnectMode { BLUETOOTH, LAN }
+
+@Composable
+private fun PurplePrimaryButton(
+    label: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Surface(
+        modifier = Modifier
+            .clickable(enabled) {
+                if (enabled) onClick()
+            },
+        shape = shape,
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4C3A8C)),
+        color = Color.Transparent
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF5B4BB8),
+                            Color(0xFF4A3797)
+                        )
+                    ),
+                    shape
+                )
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                label,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectChipLikeFirstScreen(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(12.dp)
+
+    val borderColor =
+        if (selected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.outlineVariant
+
+    val bgBrush =
+        if (selected) {
+            Brush.verticalGradient(
+                listOf(
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                )
+            )
+        } else {
+            Brush.verticalGradient(
+                listOf(
+                    MaterialTheme.colorScheme.surface,
+                    MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+
+    Surface(
+        modifier = Modifier
+            .clickable { onClick() },
+        shape = shape,
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
+        color = Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier
+                .background(bgBrush, shape)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            val indicatorColor =
+                if (selected) MaterialTheme.colorScheme.primary
+                else Color.Transparent
+            val indicatorBorderColor =
+                if (selected) MaterialTheme.colorScheme.primary
+                else borderColor
+
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .background(
+                        indicatorColor,
+                        RoundedCornerShape(4.dp)
+                    )
+                    .border(
+                        androidx.compose.foundation.BorderStroke(1.dp, indicatorBorderColor),
+                        RoundedCornerShape(4.dp)
+                    )
+            )
+
+            Text(
+                text,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+private fun SmallChoiceChipMeOpponent(
+    text: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(12.dp)
+
+    val borderColor =
+        if (selected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.outlineVariant
+
+    val bgBrush =
+        if (selected) {
+            Brush.verticalGradient(
+                listOf(
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                )
+            )
+        } else {
+            Brush.verticalGradient(
+                listOf(
+                    MaterialTheme.colorScheme.surface,
+                    MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+
+    Surface(
+        modifier = Modifier
+            .clickable(enabled = enabled) {
+                if (enabled) onClick()
+            },
+        shape = shape,
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
+        color = Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier
+                .background(bgBrush, shape)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            val indicatorColor =
+                if (selected) MaterialTheme.colorScheme.primary
+                else Color.Transparent
+            val indicatorBorderColor =
+                if (selected) MaterialTheme.colorScheme.primary
+                else borderColor
+
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .background(
+                        indicatorColor,
+                        RoundedCornerShape(4.dp)
+                    )
+                    .border(
+                        androidx.compose.foundation.BorderStroke(1.dp, indicatorBorderColor),
+                        RoundedCornerShape(4.dp)
+                    )
+            )
+
+            Text(
+                text,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +269,7 @@ fun P2PGameScreen(
             BluetoothP2P.hasAllPermissions(ctx, permissionList)
         )
     }
+
     var status by remember { mutableStateOf("Not connected") }
 
     var showJoinPicker by remember { mutableStateOf(false) }
@@ -97,40 +287,44 @@ fun P2PGameScreen(
     var joinIp by remember { mutableStateOf("") }
     val myIp = remember { NetP2P.localIp(ctx) }
     var isJoining by remember { mutableStateOf(false) }
-    var errorText by remember { mutableStateOf<String?>(null) }
 
     var choiceLocked by remember { mutableStateOf(false) }
     var choiceMessage by remember { mutableStateOf("") }
 
+    var isConnected by remember { mutableStateOf(false) }
+
+    var showNotConnectedDialog by remember { mutableStateOf(false) }
+
+    var errorText by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(Unit) {
         P2PSession.connected.collect { ok ->
-            if (ok) {
-                isJoining = false
-                status = "Connected"
-            }
+            isJoining = false
+            isConnected = ok
+            status = if (ok) "Connected" else "Not connected"
         }
     }
 
     LaunchedEffect(Unit) {
         P2PSession.incoming.collect { msg ->
-            when {
-                msg == "LOCK:YOU_FIRST" -> {
+            when (msg) {
+                "LOCK:YOU_FIRST" -> {
                     choiceLocked = true
                     choiceMessage = "You chose to go first as X."
                 }
-                msg == "LOCK:YOU_SECOND" -> {
+                "LOCK:YOU_SECOND" -> {
                     choiceLocked = true
                     choiceMessage = "You chose to go second as O."
                 }
-                msg == "LOCK:REMOTE_FIRST" -> {
+                "LOCK:REMOTE_FIRST" -> {
                     choiceLocked = true
                     choiceMessage = "Your opponent chose to go first as X."
                 }
-                msg == "LOCK:REMOTE_SECOND" -> {
+                "LOCK:REMOTE_SECOND" -> {
                     choiceLocked = true
                     choiceMessage = "Your opponent chose to go second as O."
                 }
-                msg == "READY" -> {
+                "READY" -> {
                     val starter = P2PSession.chosenStarter()
                     val sideMe = P2PSession.chosenLocalSide()
                     val newSettings = GameSettings(
@@ -189,7 +383,7 @@ fun P2PGameScreen(
             Column(
                 Modifier
                     .fillMaxSize()
-                    .padding(20.dp)
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
                     .verticalScroll(rememberScrollState())
                     .imePadding(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -197,56 +391,69 @@ fun P2PGameScreen(
                 Text(
                     "Two Players",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.Bold
                 )
-                Spacer(Modifier.height(8.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = mode == ConnectMode.BLUETOOTH,
-                        onClick = { mode = ConnectMode.BLUETOOTH },
-                        label = { Text("Bluetooth") }
-                    )
-                    FilterChip(
-                        selected = mode == ConnectMode.LAN,
-                        onClick = { mode = ConnectMode.LAN },
-                        label = { Text("Local Network (Emulator)") }
-                    )
-                }
-
-                Spacer(Modifier.height(18.dp))
-                Text(status)
-                Spacer(Modifier.height(24.dp))
-
-                Text("Who goes first?", fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(
+                        16.dp,
+                        Alignment.CenterHorizontally
+                    )
                 ) {
-                    Button(
-                        onClick = {
-                            if (!choiceLocked) {
-                                P2PSession.claimMeFirst()
-                                choiceLocked = true
-                            }
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        enabled = !isJoining && !choiceLocked
+                    SelectChipLikeFirstScreen(
+                        text = "Bluetooth",
+                        selected = (mode == ConnectMode.BLUETOOTH)
                     ) {
-                        Text("Me")
+                        mode = ConnectMode.BLUETOOTH
                     }
-                    Button(
-                        onClick = {
-                            if (!choiceLocked) {
-                                P2PSession.claimOpponentFirst()
-                                choiceLocked = true
-                            }
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        enabled = !isJoining && !choiceLocked
+
+                    SelectChipLikeFirstScreen(
+                        text = "Local Network",
+                        selected = (mode == ConnectMode.LAN)
                     ) {
-                        Text("Opponent")
+                        mode = ConnectMode.LAN
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                Text(status)
+
+                Spacer(Modifier.height(24.dp))
+
+                Text("Who goes first?", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(
+                        16.dp,
+                        Alignment.CenterHorizontally
+                    )
+                ) {
+                    SmallChoiceChipMeOpponent(
+                        text = "Me",
+                        selected = choiceLocked && choiceMessage.startsWith("You chose to go first"),
+                        enabled = !choiceLocked
+                    ) {
+                        if (!choiceLocked) {
+                            P2PSession.claimMeFirst()
+                            choiceLocked = true
+                        }
+                    }
+
+                    SmallChoiceChipMeOpponent(
+                        text = "Opponent",
+                        selected = choiceLocked && choiceMessage.startsWith("You chose to go second"),
+                        enabled = !choiceLocked
+                    ) {
+                        if (!choiceLocked) {
+                            P2PSession.claimOpponentFirst()
+                            choiceLocked = true
+                        }
                     }
                 }
 
@@ -256,57 +463,53 @@ fun P2PGameScreen(
                     Text(
                         text = choiceMessage,
                         color = MaterialTheme.colorScheme.secondary,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
                     )
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(28.dp))
 
                 if (mode == ConnectMode.BLUETOOTH) {
                     if (!granted) {
-                        Button(
-                            onClick = { showPermDialog = true },
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Enable Bluetooth Permissions") }
+                        PurplePrimaryButton(
+                            label = "Enable Bluetooth Permissions",
+                            enabled = true
+                        ) {
+                            showPermDialog = true
+                        }
                     } else {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Button(
-                                onClick = {
-                                    status = "Hosting…"
-                                    P2PSession.host(ctx)
-                                },
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("Host") }
+                        PurplePrimaryButton(
+                            label = "Host",
+                            enabled = !isJoining
+                        ) {
+                            status = "Hosting…"
+                            P2PSession.host(ctx)
+                        }
 
-                            Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(16.dp))
 
-                            Button(
-                                onClick = {
-                                    bonded = BluetoothP2P.bondedDevices(ctx)
-                                    showJoinPicker = true
-                                },
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("Join") }
+                        PurplePrimaryButton(
+                            label = "Join",
+                            enabled = !isJoining
+                        ) {
+                            bonded = BluetoothP2P.bondedDevices(ctx)
+                            showJoinPicker = true
                         }
                     }
                 } else {
-                    Text("Your IP (host shares this): $myIp")
-                    Spacer(Modifier.height(12.dp))
+                    Text("Your IP: $myIp")
+                    Spacer(Modifier.height(16.dp))
 
-                    Button(
-                        onClick = {
-                            status = "Hosting on $myIp…"
-                            P2PSession.hostLan()
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth(),
+                    PurplePrimaryButton(
+                        label = "Host",
                         enabled = !isJoining
-                    ) { Text("Host") }
+                    ) {
+                        status = "Hosting on $myIp…"
+                        P2PSession.hostLan()
+                    }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(16.dp))
 
                     OutlinedTextField(
                         value = joinIp,
@@ -318,48 +521,41 @@ fun P2PGameScreen(
                         enabled = !isJoining
                     )
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                    Button(
-                        onClick = {
-                            val ip = joinIp.trim()
-                            val ipv4 = Regex("""\b\d{1,3}(\.\d{1,3}){3}\b""")
-                            if (
-                                ip.isEmpty() ||
-                                !ipv4.matches(ip) ||
-                                ip == "127.0.0.1" ||
-                                ip == "0.0.0.0"
-                            ) {
-                                errorText =
-                                    "Enter a valid IPv4 address on your Wi-Fi (e.g. 192.168.x.y)."
-                            } else {
-                                isJoining = true
-                                status = "Joining $ip…"
-                                P2PSession.joinLan(ip)
-                            }
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth(),
+                    PurplePrimaryButton(
+                        label = if (isJoining) "Joining…" else "Join",
                         enabled = !isJoining
                     ) {
-                        Text(if (isJoining) "Joining…" else "Join")
+                        val ip = joinIp.trim()
+                        val ipv4 = Regex("""\b\d{1,3}(\.\d{1,3}){3}\b""")
+                        if (
+                            ip.isEmpty() ||
+                            !ipv4.matches(ip) ||
+                            ip == "127.0.0.1" ||
+                            ip == "0.0.0.0"
+                        ) {
+                            errorText =
+                                "Enter a valid IPv4 address on your Wi-Fi (e.g. 192.168.x.y)."
+                        } else {
+                            isJoining = true
+                            status = "Joining $ip…"
+                            P2PSession.joinLan(ip)
+                        }
                     }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(32.dp))
 
-                Button(
-                    onClick = {
-                        if (choiceLocked) {
-                            P2PSession.finalizeAndSync()
-                        } else {
-                            errorText = "Choose who goes first before continuing."
-                        }
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
+                PurplePrimaryButton(
+                    label = "Start Game",
+                    enabled = true
                 ) {
-                    Text("Continue to Game")
+                    if (choiceLocked && isConnected) {
+                        P2PSession.finalizeAndSync()
+                    } else {
+                        showNotConnectedDialog = true
+                    }
                 }
             }
         }
@@ -419,6 +615,19 @@ fun P2PGameScreen(
                 TextButton(onClick = { showJoinPicker = false }) {
                     Text("Close")
                 }
+            }
+        )
+    }
+
+    if (showNotConnectedDialog) {
+        AlertDialog(
+            onDismissRequest = { showNotConnectedDialog = false },
+            title = { Text("Not Yet Connected") },
+            text = { Text("Make sure both players are connected and who goes first is selected.") },
+            confirmButton = {
+                TextButton(
+                    onClick = { showNotConnectedDialog = false }
+                ) { Text("OK") }
             }
         )
     }
