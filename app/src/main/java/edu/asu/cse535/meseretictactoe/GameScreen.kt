@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -51,8 +50,10 @@ import androidx.navigation.NavHostController
 @Composable
 fun GameScreen(vm: GameViewModel, nav: NavHostController) {
     val ui by vm.ui.collectAsState()
-    val settings = vm.settings
+    val settingsSnapshot = vm.settings
     val aiSide = vm.aiSide
+
+    var localDifficulty by remember { mutableStateOf(settingsSnapshot.difficulty) }
 
     val bg = Brush.linearGradient(
         0f to Color(0xFFFEF3C7),
@@ -105,12 +106,25 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
 
                     Spacer(Modifier.height(12.dp))
 
-                    ModePill(settings)
+                    ModePill(
+                        opponent = settingsSnapshot.opponent,
+                        difficulty = localDifficulty
+                    )
 
+                    if (settingsSnapshot.opponent == Opponent.AI) {
+                        Spacer(Modifier.height(12.dp))
+                        DifficultyRow(
+                            current = localDifficulty,
+                            onSelect = { newDiff ->
+                                localDifficulty = newDiff
+                                vm.setDifficulty(newDiff)
+                            }
+                        )
+                    }
 
-                    if (settings.opponent == Opponent.HUMAN_BT) {
+                    if (settingsSnapshot.opponent == Opponent.HUMAN_BT) {
                         Spacer(Modifier.height(8.dp))
-                        val me = settings.localSide
+                        val me = settingsSnapshot.localSide
                         val them = if (me == Player.X) Player.O else Player.X
                         Text(
                             text = "You are $me • Opponent is $them",
@@ -130,25 +144,21 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
                         board = ui.state.board,
                         enabled =
                             ui.outcome == Outcome.ONGOING &&
-                                    // if AI mode: block taps when it's AI's turn
                                     (aiSide == null || ui.state.playerToMove != aiSide) &&
-                                    // if BT mode: block taps when it's not MY turn
-                                    (settings.opponent != Opponent.HUMAN_BT ||
-                                            ui.state.playerToMove == settings.localSide)
+                                    (settingsSnapshot.opponent != Opponent.HUMAN_BT ||
+                                            ui.state.playerToMove == settingsSnapshot.localSide)
                     ) { vm.tap(it) }
 
                     Spacer(Modifier.height(16.dp))
 
-                    ResultBanner(ui.outcome, settings.opponent)
+                    ResultBanner(ui.outcome, settingsSnapshot.opponent)
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(20.dp))
 
-                    ElevatedButton(
-                        onClick = { vm.reset() },
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text("New Game")
-                    }
+                    PrimaryButton(
+                        label = "New Game",
+                        onClick = { vm.reset() }
+                    )
                 }
             }
         }
@@ -156,10 +166,13 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
 }
 
 @Composable
-private fun ModePill(settings: GameSettings) {
-    val label = when (settings.opponent) {
+private fun ModePill(
+    opponent: Opponent,
+    difficulty: Difficulty
+) {
+    val label = when (opponent) {
         Opponent.AI -> {
-            val diff = settings.difficulty.name.lowercase()
+            val diff = difficulty.name.lowercase()
                 .replaceFirstChar { it.uppercase() }
             "AI • $diff • You’re X"
         }
@@ -167,8 +180,9 @@ private fun ModePill(settings: GameSettings) {
         Opponent.HUMAN_BT -> "Two Players • Bluetooth"
     }
 
+    val shape = RoundedCornerShape(999.dp)
     Surface(
-        shape = RoundedCornerShape(999.dp),
+        shape = shape,
         color = Color(0xFFDCFCE7),
         contentColor = Color(0xFF065F46),
         border = BorderStroke(1.dp, Color(0xFF10B981))
@@ -182,17 +196,127 @@ private fun ModePill(settings: GameSettings) {
 }
 
 @Composable
-private fun TurnChip(player: Player) {
-    val (bg, fg) = if (player == Player.X)
-        Color(0xFFFFEDD5) to Color(0xFF9A3412)
-    else
-        Color(0xFFE0E7FF) to Color(0xFF3730A3)
+private fun DifficultyRow(
+    current: Difficulty,
+    onSelect: (Difficulty) -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        SelectableChip(
+            label = "Easy",
+            active = current == Difficulty.EASY,
+            onClick = { onSelect(Difficulty.EASY) }
+        )
+        SelectableChip(
+            label = "Medium",
+            active = current == Difficulty.MEDIUM,
+            onClick = { onSelect(Difficulty.MEDIUM) }
+        )
+        SelectableChip(
+            label = "Hard",
+            active = current == Difficulty.HARD,
+            onClick = { onSelect(Difficulty.HARD) }
+        )
+    }
+}
 
+@Composable
+private fun SelectableChip(
+    label: String,
+    active: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(12.dp)
+    val borderColor = MaterialTheme.colorScheme.primary
+    val bgColors = if (active) {
+        Brush.verticalGradient(
+            listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+            )
+        )
+    } else {
+        Brush.verticalGradient(
+            listOf(
+                Color.Transparent,
+                Color.Transparent
+            )
+        )
+    }
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .clickable { onClick() },
+        shape = shape,
+        border = BorderStroke(1.dp, borderColor),
+        color = Color.Transparent
+    ) {
+        Box(
+            modifier = Modifier
+                .background(bgColors, shape)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                color = if (active) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrimaryButton(
+    label: String,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Surface(
+        modifier = Modifier
+            .clickable { onClick() },
+        shape = shape,
+        border = BorderStroke(1.dp, Color(0xFF4C3A8C)),
+        color = Color.Transparent
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF5B4BB8),
+                            Color(0xFF4A3797)
+                        )
+                    ),
+                    shape
+                )
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                label,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun TurnChip(player: Player) {
+    val (bg, fg, borderC) = if (player == Player.X)
+        Triple(Color(0xFFFFEDD5), Color(0xFF9A3412), Color(0xFF9A3412).copy(alpha = 0.25f))
+    else
+        Triple(Color(0xFFE0E7FF), Color(0xFF3730A3), Color(0xFF3730A3).copy(alpha = 0.25f))
+
+    val shape = RoundedCornerShape(12.dp)
+    Surface(
+        shape = shape,
         color = bg,
         contentColor = fg,
-        border = BorderStroke(1.dp, fg.copy(alpha = 0.25f))
+        border = BorderStroke(1.dp, borderC)
     ) {
         Text(
             text = "Turn: $player",
@@ -267,6 +391,7 @@ private fun Tile(
 
     val scale = if (pressed) 0.98f else 1f
 
+    val shape = RoundedCornerShape(16.dp)
     OutlinedCard(
         modifier = Modifier
             .size(size)
@@ -279,7 +404,7 @@ private fun Tile(
                     ) { onTap() }
                 } else it
             },
-        shape = RoundedCornerShape(16.dp),
+        shape = shape,
         border = BorderStroke(2.dp, Color.White.copy(alpha = 0.8f)),
         colors = CardDefaults.outlinedCardColors(
             containerColor = color.copy(alpha = 0.95f)
@@ -309,17 +434,12 @@ private fun ResultBanner(
     outcome: Outcome,
     opponent: Opponent
 ) {
-
     val friendly = when {
         opponent == Opponent.AI && outcome == Outcome.X_LOSES -> "Computer wins"
         opponent == Opponent.AI && outcome == Outcome.O_LOSES -> "You win"
-
         outcome == Outcome.DRAW -> "Result: Draw"
-
-
         outcome == Outcome.X_LOSES -> "Result: O wins"
         outcome == Outcome.O_LOSES -> "Result: X wins"
-
         else -> ""
     }
 
@@ -331,8 +451,9 @@ private fun ResultBanner(
     }
 
     if (friendly.isNotEmpty()) {
+        val shape = RoundedCornerShape(12.dp)
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = shape,
             color = bg,
             contentColor = fg,
             border = if (bg != Color.Transparent)

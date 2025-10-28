@@ -54,8 +54,8 @@ enum class ConnectMode { BLUETOOTH, LAN }
 @Composable
 fun P2PGameScreen(
     nav: NavHostController,
-    gameVm: GameViewModel,      // <-- main gameplay VM
-    p2pVm: P2PGameViewModel     // <-- keep if you still use it elsewhere
+    gameVm: GameViewModel,
+    p2pVm: P2PGameViewModel
 ) {
     val ctx = LocalContext.current
 
@@ -99,26 +99,49 @@ fun P2PGameScreen(
     var isJoining by remember { mutableStateOf(false) }
     var errorText by remember { mutableStateOf<String?>(null) }
 
+    var choiceLocked by remember { mutableStateOf(false) }
+    var choiceMessage by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         P2PSession.connected.collect { ok ->
             if (ok) {
                 isJoining = false
                 status = "Connected"
+            }
+        }
+    }
 
-
-                val newSettings = GameSettings(
-                    opponent = Opponent.HUMAN_BT,
-                    difficulty = Difficulty.EASY,
-                    starter = Player.X,
-                    localSide = Player.X
-                )
-
-
-                gameVm.applySettings(newSettings)
-
-
-                nav.navigate(AppRoute.MAIN.name)
+    LaunchedEffect(Unit) {
+        P2PSession.incoming.collect { msg ->
+            when {
+                msg == "LOCK:YOU_FIRST" -> {
+                    choiceLocked = true
+                    choiceMessage = "You chose to go first as X."
+                }
+                msg == "LOCK:YOU_SECOND" -> {
+                    choiceLocked = true
+                    choiceMessage = "You chose to go second as O."
+                }
+                msg == "LOCK:REMOTE_FIRST" -> {
+                    choiceLocked = true
+                    choiceMessage = "Your opponent chose to go first as X."
+                }
+                msg == "LOCK:REMOTE_SECOND" -> {
+                    choiceLocked = true
+                    choiceMessage = "Your opponent chose to go second as O."
+                }
+                msg == "READY" -> {
+                    val starter = P2PSession.chosenStarter()
+                    val sideMe = P2PSession.chosenLocalSide()
+                    val newSettings = GameSettings(
+                        opponent = Opponent.HUMAN_BT,
+                        difficulty = Difficulty.EASY,
+                        starter = starter,
+                        localSide = sideMe
+                    )
+                    gameVm.applySettings(newSettings)
+                    nav.navigate(AppRoute.MAIN.name)
+                }
             }
         }
     }
@@ -195,6 +218,50 @@ fun P2PGameScreen(
                 Text(status)
                 Spacer(Modifier.height(24.dp))
 
+                Text("Who goes first?", fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (!choiceLocked) {
+                                P2PSession.claimMeFirst()
+                                choiceLocked = true
+                            }
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = !isJoining && !choiceLocked
+                    ) {
+                        Text("Me")
+                    }
+                    Button(
+                        onClick = {
+                            if (!choiceLocked) {
+                                P2PSession.claimOpponentFirst()
+                                choiceLocked = true
+                            }
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = !isJoining && !choiceLocked
+                    ) {
+                        Text("Opponent")
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                if (choiceMessage.isNotEmpty()) {
+                    Text(
+                        text = choiceMessage,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
                 if (mode == ConnectMode.BLUETOOTH) {
                     if (!granted) {
                         Button(
@@ -207,12 +274,11 @@ fun P2PGameScreen(
                             Button(
                                 onClick = {
                                     status = "Hosting…"
-                                    // Hosting: this device will become X and go first
                                     P2PSession.host(ctx)
                                 },
                                 shape = RoundedCornerShape(16.dp),
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("Host (You will be X)") }
+                            ) { Text("Host") }
 
                             Spacer(Modifier.height(12.dp))
 
@@ -223,24 +289,22 @@ fun P2PGameScreen(
                                 },
                                 shape = RoundedCornerShape(16.dp),
                                 modifier = Modifier.fillMaxWidth()
-                            ) { Text("Join (You will be O)") }
+                            ) { Text("Join") }
                         }
                     }
                 } else {
-                    // LAN mode
                     Text("Your IP (host shares this): $myIp")
                     Spacer(Modifier.height(12.dp))
 
                     Button(
                         onClick = {
                             status = "Hosting on $myIp…"
-                            // Host on LAN -> will be X / goes first
                             P2PSession.hostLan()
                         },
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isJoining
-                    ) { Text("Host (You will be X)") }
+                    ) { Text("Host") }
 
                     Spacer(Modifier.height(12.dp))
 
@@ -271,7 +335,6 @@ fun P2PGameScreen(
                             } else {
                                 isJoining = true
                                 status = "Joining $ip…"
-                                // Join on LAN -> will be O / goes second
                                 P2PSession.joinLan(ip)
                             }
                         },
@@ -279,13 +342,28 @@ fun P2PGameScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isJoining
                     ) {
-                        Text(if (isJoining) "Joining…" else "Join (You will be O)")
+                        Text(if (isJoining) "Joining…" else "Join")
                     }
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        if (choiceLocked) {
+                            P2PSession.finalizeAndSync()
+                        } else {
+                            errorText = "Choose who goes first before continuing."
+                        }
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Continue to Game")
                 }
             }
         }
     }
-
 
     if (showPermDialog && !granted && mode == ConnectMode.BLUETOOTH) {
         AlertDialog(
@@ -307,7 +385,6 @@ fun P2PGameScreen(
             }
         )
     }
-
 
     if (showJoinPicker) {
         AlertDialog(
@@ -331,7 +408,6 @@ fun P2PGameScreen(
                                     .clickable {
                                         showJoinPicker = false
                                         status = "Connecting to ${dev.second}…"
-                                        // Joining => this device will be O / second
                                         P2PSession.join(ctx, dev.first)
                                     }
                             )
@@ -346,7 +422,6 @@ fun P2PGameScreen(
             }
         )
     }
-
 
     if (errorText != null) {
         AlertDialog(

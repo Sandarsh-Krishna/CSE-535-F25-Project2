@@ -10,6 +10,9 @@ import androidx.navigation.compose.rememberNavController
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        ResultsStore.init(this)
+
         setContent {
             MaterialTheme {
                 Surface {

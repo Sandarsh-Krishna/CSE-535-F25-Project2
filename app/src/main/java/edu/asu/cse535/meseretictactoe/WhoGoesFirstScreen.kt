@@ -14,16 +14,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,9 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
@@ -51,8 +44,6 @@ fun WhoGoesFirstScreen(
 ) {
     var opponent by remember { mutableStateOf(current.opponent) }
     var difficulty by remember { mutableStateOf(current.difficulty) }
-    var diffMenuExpanded by remember { mutableStateOf(false) }
-
     var tpMode by remember {
         mutableStateOf(
             if (current.opponent == Opponent.HUMAN_BT)
@@ -69,11 +60,7 @@ fun WhoGoesFirstScreen(
     )
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { /* title rendered below */ }
-            )
-        },
+        topBar = { TopAppBar(title = {}) },
         containerColor = Color.Transparent
     ) { pad ->
         Box(
@@ -88,8 +75,11 @@ fun WhoGoesFirstScreen(
                     .padding(horizontal = 24.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
-                Text("Select Mode", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Select Mode",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
 
                 Spacer(Modifier.height(12.dp))
                 Text("Play against", style = MaterialTheme.typography.titleMedium)
@@ -128,65 +118,12 @@ fun WhoGoesFirstScreen(
                     Text("Difficulty", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(12.dp))
 
-                    Box(contentAlignment = Alignment.Center) {
-                        ExposedDropdownMenuBox(
-                            expanded = diffMenuExpanded,
-                            onExpandedChange = { diffMenuExpanded = !diffMenuExpanded }
-                        ) {
-                            val label = when (difficulty) {
-                                Difficulty.EASY -> "Easy"
-                                Difficulty.MEDIUM -> "Medium"
-                                Difficulty.HARD -> "Hard"
-                            }
+                    DifficultyRowSetup(
+                        current = difficulty,
+                        onSelect = { difficulty = it }
+                    )
 
-                            OutlinedTextField(
-                                value = label,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Select difficulty") },
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(
-                                        expanded = diffMenuExpanded
-                                    )
-                                },
-                                modifier = Modifier
-                                    .menuAnchor(
-                                        type = MenuAnchorType.PrimaryNotEditable,
-                                        enabled = true
-                                    )
-                                    .widthIn(min = 220.dp)
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = diffMenuExpanded,
-                                onDismissRequest = { diffMenuExpanded = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Easy") },
-                                    onClick = {
-                                        difficulty = Difficulty.EASY
-                                        diffMenuExpanded = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Medium") },
-                                    onClick = {
-                                        difficulty = Difficulty.MEDIUM
-                                        diffMenuExpanded = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Hard") },
-                                    onClick = {
-                                        difficulty = Difficulty.HARD
-                                        diffMenuExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(16.dp))
 
                     Text(
                         "You will play as X and go first.",
@@ -222,27 +159,13 @@ fun WhoGoesFirstScreen(
                     }
 
                     Spacer(Modifier.height(20.dp))
-
-
-                    val message =
-                        if (tpMode == TwoPlayerMode.LOCAL) {
-                            "X plays first"
-                        } else {
-                            "Host plays first as X"
-                        }
-
-                    Text(
-                        message,
-                        color = MaterialTheme.colorScheme.secondary,
-                        textAlign = TextAlign.Center
-                    )
                 }
 
                 Spacer(Modifier.height(32.dp))
 
-                Button(
+                PrimaryButton(
+                    label = "Start",
                     onClick = {
-
                         val settings = when (opponent) {
                             Opponent.AI -> GameSettings(
                                 opponent = Opponent.AI,
@@ -258,21 +181,129 @@ fun WhoGoesFirstScreen(
                                 localSide = Player.X
                             )
 
-                            Opponent.HUMAN_BT -> GameSettings(
-                                opponent = Opponent.HUMAN_BT,
-                                difficulty = difficulty,
-                                starter = Player.X,
-                                localSide = Player.X
-                            )
+                            Opponent.HUMAN_BT -> {
+                                GameSettings(
+                                    opponent = Opponent.HUMAN_BT,
+                                    difficulty = difficulty,
+                                    starter = Player.X,
+                                    localSide = Player.X
+                                )
+                            }
                         }
 
                         onApply(settings)
-                    },
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text("Start")
-                }
+                    }
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun DifficultyRowSetup(
+    current: Difficulty,
+    onSelect: (Difficulty) -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        SelectableChip(
+            label = "Easy",
+            active = current == Difficulty.EASY,
+            onClick = { onSelect(Difficulty.EASY) }
+        )
+        SelectableChip(
+            label = "Medium",
+            active = current == Difficulty.MEDIUM,
+            onClick = { onSelect(Difficulty.MEDIUM) }
+        )
+        SelectableChip(
+            label = "Hard",
+            active = current == Difficulty.HARD,
+            onClick = { onSelect(Difficulty.HARD) }
+        )
+    }
+}
+
+@Composable
+private fun PrimaryButton(
+    label: String,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Surface(
+        modifier = Modifier
+            .clickable { onClick() },
+        shape = shape,
+        border = BorderStroke(1.dp, Color(0xFF4C3A8C)),
+        color = Color.Transparent
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF5B4BB8),
+                            Color(0xFF4A3797)
+                        )
+                    ),
+                    shape
+                )
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                label,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectableChip(
+    label: String,
+    active: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(12.dp)
+    val borderColor = MaterialTheme.colorScheme.primary
+    val bgColors = if (active) {
+        Brush.verticalGradient(
+            listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+            )
+        )
+    } else {
+        Brush.verticalGradient(
+            listOf(
+                Color.Transparent,
+                Color.Transparent
+            )
+        )
+    }
+    Surface(
+        modifier = Modifier
+            .clickable { onClick() },
+        shape = shape,
+        border = BorderStroke(1.dp, borderColor),
+        color = Color.Transparent
+    ) {
+        Box(
+            modifier = Modifier
+                .background(bgColors, shape)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                color = if (active) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
@@ -284,43 +315,66 @@ private fun SquareOption(
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(12.dp)
+    val borderColor =
+        if (selected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.outlineVariant
+
+    val bgBrush =
+        if (selected) {
+            Brush.verticalGradient(
+                listOf(
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                )
+            )
+        } else {
+            Brush.verticalGradient(
+                listOf(
+                    MaterialTheme.colorScheme.surface,
+                    MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+
     Surface(
         modifier = Modifier
-            .clip(shape)
             .clickable { onClick() },
         shape = shape,
-        tonalElevation = if (selected) 2.dp else 0.dp,
-        shadowElevation = 0.dp,
-        border =
-            if (selected)
-                BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-            else
-                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        border = BorderStroke(1.dp, borderColor),
+        color = Color.Transparent
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier
+                .background(bgBrush, shape)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            val indicatorColor =
+                if (selected) MaterialTheme.colorScheme.primary
+                else Color.Transparent
+            val indicatorBorderColor =
+                if (selected) MaterialTheme.colorScheme.primary
+                else borderColor
+
             Box(
                 modifier = Modifier
                     .size(18.dp)
-                    .clip(RoundedCornerShape(4.dp))
                     .background(
-                        if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surface
+                        indicatorColor,
+                        RoundedCornerShape(4.dp)
                     )
                     .border(
-                        width = 1.dp,
-                        color =
-                            if (selected)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.outlineVariant,
-                        shape = RoundedCornerShape(4.dp)
+                        BorderStroke(1.dp, indicatorBorderColor),
+                        RoundedCornerShape(4.dp)
                     )
             )
-            Text(text)
+
+            Text(
+                text,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }

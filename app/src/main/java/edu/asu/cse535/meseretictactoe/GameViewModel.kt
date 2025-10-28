@@ -11,7 +11,6 @@ import kotlinx.coroutines.launch
 enum class Difficulty { EASY, MEDIUM, HARD }
 enum class Opponent { AI, HUMAN_LOCAL, HUMAN_BT }
 
-
 data class GameSettings(
     val opponent: Opponent = Opponent.AI,
     val difficulty: Difficulty = Difficulty.EASY,
@@ -31,12 +30,10 @@ class GameViewModel : ViewModel() {
     var settings: GameSettings = GameSettings()
         private set
 
-
-    val aiSide: Player? get() =
-        if (settings.opponent == Opponent.AI) Player.O else null
+    val aiSide: Player?
+        get() = if (settings.opponent == Opponent.AI) Player.O else null
 
     init {
-
         viewModelScope.launch {
             P2PSession.incoming.collectLatest { msg ->
                 when {
@@ -44,28 +41,22 @@ class GameViewModel : ViewModel() {
                         val idx = msg.removePrefix("MOVE:").toIntOrNull() ?: return@collectLatest
                         applyPeerMove(idx)
                     }
-
                     msg == "RESET" -> {
                         resetInternal(sync = false)
                     }
-
                     msg.startsWith("SYNC:") -> {
-
                         val parts = msg.split(":")
-                        val starterFromPeer =
-                            if (parts.getOrNull(1) == "starterX") Player.X else Player.O
-                        val peerClaimsSide =
-                            if (parts.getOrNull(2) == "iamX") Player.X else Player.O
-
-
-                        val mySide = if (peerClaimsSide == Player.X) Player.O else Player.X
+                        val starterFromSync =
+                            if (parts.getOrNull(1) == "X") Player.X else Player.O
+                        val localSideStr = parts.getOrNull(2)
+                        val mySide =
+                            if (localSideStr == "X") Player.X else Player.O
 
                         settings = settings.copy(
                             opponent = Opponent.HUMAN_BT,
-                            starter = starterFromPeer,
+                            starter = starterFromSync,
                             localSide = mySide
                         )
-
                         resetInternal(sync = false)
                     }
                 }
@@ -73,118 +64,86 @@ class GameViewModel : ViewModel() {
         }
     }
 
-
     fun applySettings(s: GameSettings) {
         when (s.opponent) {
             Opponent.AI -> {
-                // Force X starts, local player is X
                 settings = s.copy(
                     starter = Player.X,
                     localSide = Player.X,
                     opponent = Opponent.AI
                 )
             }
-
             Opponent.HUMAN_LOCAL -> {
-                // Same phone 2 players
                 settings = s.copy(
+                    starter = Player.X,
                     localSide = Player.X,
                     opponent = Opponent.HUMAN_LOCAL
                 )
             }
-
             Opponent.HUMAN_BT -> {
-                // Bluetooth peer-to-peer
-                val amHost = (P2PSession.amHost == true)
-                val mySide = if (amHost) Player.X else Player.O
-                val startPlayer = Player.X // X always goes first
-
                 settings = s.copy(
-                    starter = startPlayer,
-                    localSide = mySide,
                     opponent = Opponent.HUMAN_BT
                 )
-
-
-                val syncMsg =
-                    "SYNC:" +
-                            (if (startPlayer == Player.X) "starterX" else "starterO") +
-                            ":iam" + (if (mySide == Player.X) "X" else "O")
-                P2PSession.send(syncMsg)
             }
+        }
+    }
+
+    fun setDifficulty(newDiff: Difficulty) {
+        if (settings.opponent == Opponent.AI) {
+            settings = settings.copy(difficulty = newDiff)
         }
     }
 
     fun reset() = resetInternal(sync = true)
 
     private fun resetInternal(sync: Boolean) {
-
         val startPlayer =
             if (settings.opponent == Opponent.AI) Player.X
             else settings.starter
-
         _ui.value = UiState(
             state = GameState(playerToMove = startPlayer),
             outcome = Outcome.ONGOING
         )
-
         if (sync && settings.opponent == Opponent.HUMAN_BT) {
             P2PSession.send("RESET")
         }
     }
 
-
     fun tap(index: Int) {
         if (_ui.value.outcome != Outcome.ONGOING) return
-
         val cur = _ui.value.state
-
-
         if (settings.opponent == Opponent.HUMAN_BT) {
             if (cur.playerToMove != settings.localSide) {
-                // It's not your turn, ignore the tap.
                 return
             }
         }
-
         if (index !in cur.moves()) return
-
         val next = cur.place(index)
         evaluateAfterMove(cur, next)
-
-
         if (settings.opponent == Opponent.AI &&
             _ui.value.outcome == Outcome.ONGOING &&
             _ui.value.state.playerToMove == aiSide
         ) {
             aiMove()
         }
-
-
         if (settings.opponent == Opponent.HUMAN_BT) {
             P2PSession.send("MOVE:$index")
         }
     }
 
-
     private fun applyPeerMove(index: Int) {
         val cur = _ui.value.state
         if (_ui.value.outcome != Outcome.ONGOING) return
         if (index !in cur.moves()) return
-
         val next = cur.place(index)
         evaluateAfterMove(cur, next)
     }
 
-
     private fun evaluateAfterMove(prev: GameState, next: GameState) {
         val mover = prev.playerToMove
         val outcome = MisereRules.outcomeAfter(next, mover)
-
         _ui.update { it.copy(state = next, outcome = outcome) }
-
         if (outcome != Outcome.ONGOING) {
-            // You already have ResultsStore.add(PastGame(...))
             ResultsStore.add(
                 PastGame(
                     timeMillis = System.currentTimeMillis(),
@@ -195,18 +154,15 @@ class GameViewModel : ViewModel() {
         }
     }
 
-
     fun aiMove() {
         val cur = _ui.value.state
         val legal = cur.moves()
         if (legal.isEmpty()) return
-
         val i = when (settings.difficulty) {
             Difficulty.EASY -> easyMove(cur)
             Difficulty.MEDIUM -> mediumMove(cur)
             Difficulty.HARD -> hardMove(cur)
         }
-
         val next = cur.place(i)
         evaluateAfterMove(cur, next)
     }
@@ -224,14 +180,11 @@ class GameViewModel : ViewModel() {
         return (safe.ifEmpty { legal }).random()
     }
 
-
-
     private val memo = HashMap<Pair<List<Cell>, Player>, Int>()
 
     private fun hardMove(state: GameState): Int {
         var bestScore = Int.MIN_VALUE
         var bestIdx = state.moves().first()
-
         for (i in state.moves()) {
             val s2 = state.place(i)
             val score = -minimax(s2, justMoved = state.playerToMove)
@@ -241,7 +194,6 @@ class GameViewModel : ViewModel() {
             }
             if (bestScore == 1) break
         }
-
         return bestIdx
     }
 
@@ -250,12 +202,10 @@ class GameViewModel : ViewModel() {
             Outcome.X_LOSES -> return if (justMoved == Player.X) +1 else -1
             Outcome.O_LOSES -> return if (justMoved == Player.O) +1 else -1
             Outcome.DRAW -> return 0
-            Outcome.ONGOING -> { /* keep going */ }
+            Outcome.ONGOING -> { }
         }
-
         val key = Pair(state.board, state.playerToMove)
         memo[key]?.let { return it }
-
         var best = Int.MIN_VALUE
         for (i in state.moves()) {
             val s2 = state.place(i)

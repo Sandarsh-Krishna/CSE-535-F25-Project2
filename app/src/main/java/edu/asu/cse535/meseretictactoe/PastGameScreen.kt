@@ -35,18 +35,18 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PastGameScreen(nav: NavHostController) {
-
-    val items = ResultsStore.items
-
     val fmt = remember {
         SimpleDateFormat("MMM d, yyyy • h:mm a", Locale.getDefault())
     }
-
     val bg = Brush.linearGradient(
         0f to Color(0xFFFEF3C7),
         0.5f to Color(0xFFE9D5FF),
         1f to Color(0xFFBAE6FD)
     )
+
+    val sortedItems = remember(ResultsStore.items) {
+        ResultsStore.items.sortedByDescending { it.timeMillis }
+    }
 
     Scaffold(
         topBar = {
@@ -84,38 +84,32 @@ fun PastGameScreen(nav: NavHostController) {
                     contentPadding = PaddingValues(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(items) { game ->
+                    items(sortedItems) { game ->
+                        val modeOrDifficulty = if (game.difficulty == Difficulty.EASY) {
+                            "Mode: With Friends"
+                        } else {
+                            "Difficulty: ${game.difficulty.name}"
+                        }
+
                         OutlinedCard {
                             Column(Modifier.padding(16.dp)) {
-
                                 Text(fmt.format(Date(game.timeMillis)))
-
                                 Spacer(Modifier.height(6.dp))
-
                                 Row {
-                                    Text("Difficulty: ", fontWeight = FontWeight.Bold)
-                                    Text(game.difficulty.name)
+                                    Text(modeOrDifficulty.substringBefore(":" ) + ": ", fontWeight = FontWeight.Bold)
+                                    Text(modeOrDifficulty.substringAfter(": ").ifEmpty { "With Friends" })
                                 }
-
                                 Spacer(Modifier.height(2.dp))
-
                                 Row {
                                     Text("Outcome: ", fontWeight = FontWeight.Bold)
-
-                                    // FIXED:
-                                    // - Instead of "Computer wins" / "You win" hardcoded,
-                                    //   we now map the stored outcome in a neutral way.
                                     val outcomeText = when (game.outcome) {
                                         Outcome.DRAW -> "Draw"
                                         Outcome.X_LOSES -> "O wins"
                                         Outcome.O_LOSES -> "X wins"
                                         Outcome.ONGOING -> "Ongoing"
                                     }
-
                                     Text(outcomeText)
                                 }
-
-
                             }
                         }
                     }
