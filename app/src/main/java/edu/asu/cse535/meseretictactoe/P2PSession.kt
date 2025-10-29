@@ -28,20 +28,20 @@ object P2PSession {
     private val _connected = MutableStateFlow(false)
     val connected = _connected.asStateFlow()
 
-    private val _incoming = MutableSharedFlow<String>(extraBufferCapacity = 32)
+    private val _incoming = MutableSharedFlow<String>(extraBufferCapacity = 64)
     val incoming = _incoming.asSharedFlow()
 
     private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val errors = _errors.asSharedFlow()
 
-    private var chosenLocked = false
-    private var starterPlayer: Player = Player.X
-    private var localPlayerSide: Player = Player.X
+    private var starterSide: Player = Player.X
+    private var hostSide: Player = Player.X
+    private var joinerSide: Player = Player.O
+    private var mySide: Player = Player.X
 
     @SuppressLint("MissingPermission")
     fun host(ctx: Context) {
         amHost = true
-        chosenLocked = false
         val ad = BluetoothP2P.adapter(ctx) ?: return
         if (!BluetoothP2P.hasConnectPermission(ctx)) return
         CoroutineScope(Dispatchers.IO).launch {
@@ -64,7 +64,6 @@ object P2PSession {
     @SuppressLint("MissingPermission")
     fun join(ctx: Context, address: String) {
         amHost = false
-        chosenLocked = false
         val ad = BluetoothP2P.adapter(ctx) ?: return
         if (!BluetoothP2P.hasConnectPermission(ctx)) return
         CoroutineScope(Dispatchers.IO).launch {
@@ -91,7 +90,7 @@ object P2PSession {
                 val rd = BufferedReader(InputStreamReader(s.inputStream))
                 while (true) {
                     val line = rd.readLine() ?: break
-                    handleIncomingLine(line)
+                    _incoming.tryEmit(line)
                 }
             } catch (_: Throwable) { }
             _connected.value = false
@@ -101,7 +100,6 @@ object P2PSession {
 
     fun hostLan() {
         amHost = true
-        chosenLocked = false
         NetP2P.host(
             onSocket = { s -> onNetSocketReady(s) },
             onError = { t ->
@@ -113,7 +111,6 @@ object P2PSession {
 
     fun joinLan(ip: String) {
         amHost = false
-        chosenLocked = false
         NetP2P.join(
             ip = ip,
             onSocket = { s -> onNetSocketReady(s) },
@@ -126,70 +123,65 @@ object P2PSession {
 
     private fun onNetSocketReady(s: Socket) {
         netSocket = s
-        writer = NetP2P.ioLoop(s) { handleIncomingLine(it) }
+        writer = NetP2P.ioLoop(s) { line ->
+            _incoming.tryEmit(line)
+        }
         _connected.value = true
     }
 
-    private fun handleIncomingLine(line: String) {
-        if (line.startsWith("CLAIM:")) {
-            if (!chosenLocked) {
-                when (line.removePrefix("CLAIM:")) {
-                    "ME_FIRST" -> {
-                        starterPlayer = Player.X
-                        localPlayerSide = if (amHost == true) Player.O else Player.O
-                        chosenLocked = true
-                        _incoming.tryEmit("LOCK:REMOTE_FIRST")
-                    }
-                    "OPP_FIRST" -> {
-                        starterPlayer = Player.X
-                        localPlayerSide = if (amHost == true) Player.X else Player.X
-                        chosenLocked = true
-                        _incoming.tryEmit("LOCK:REMOTE_SECOND")
-                    }
-                }
-            }
-            return
+    fun claimLocalFirst() {
+        if (amHost == true) {
+            starterSide = Player.X
+            hostSide = Player.X
+            joinerSide = Player.O
+            mySide = Player.X
+        } else {
+            starterSide = Player.X
+            hostSide = Player.X
+            joinerSide = Player.O
+            mySide = Player.O
         }
-        if (line.startsWith("SYNC:")) {
-            val parts = line.split(":")
-            val starterStr = parts.getOrNull(1)
-            val localSideStr = parts.getOrNull(2)
-            val st = if (starterStr == "X") Player.X else Player.O
-            val ls = if (localSideStr == "X") Player.X else Player.O
-            starterPlayer = st
-            localPlayerSide = ls
-            chosenLocked = true
-            _incoming.tryEmit("READY")
-            return
-        }
-        _incoming.tryEmit(line)
+        val msg = "LOCKSET:${starterSide.name}:${hostSide.name}:${joinerSide.name}"
+        send(msg)
     }
 
-    fun claimMeFirst() {
-        if (chosenLocked) return
-        chosenLocked = true
-        starterPlayer = Player.X
-        localPlayerSide = Player.X
-        send("CLAIM:OPP_FIRST")
-        _incoming.tryEmit("LOCK:YOU_FIRST")
+    fun claimRemoteFirst() {
+        if (amHost == true) {
+            starterSide = Player.O
+            hostSide = Player.O
+            joinerSide = Player.X
+            mySide = Player.O
+        } else {
+            starterSide = Player.O
+            hostSide = Player.O
+            joinerSide = Player.X
+            mySide = Player.X
+        }
+        val msg = "LOCKSET:${starterSide.name}:${hostSide.name}:${joinerSide.name}"
+        send(msg)
     }
 
-    fun claimOpponentFirst() {
-        if (chosenLocked) return
-        chosenLocked = true
-        starterPlayer = Player.X
-        localPlayerSide = Player.O
-        send("CLAIM:ME_FIRST")
-        _incoming.tryEmit("LOCK:YOU_SECOND")
+    fun applyLocksetFromRemote(starterStr: String, hostStr: String, joinerStr: String) {
+        starterSide = if (starterStr == "X") Player.X else Player.O
+        hostSide = if (hostStr == "X") Player.X else Player.O
+        joinerSide = if (joinerStr == "X") Player.X else Player.O
+        mySide = if (amHost == true) hostSide else joinerSide
     }
 
     fun finalizeAndSync() {
-        val starterStr = if (starterPlayer == Player.X) "X" else "O"
-        val localStr = if (localPlayerSide == Player.X) "X" else "O"
-        val syncMsg = "SYNC:$starterStr:$localStr"
-        send(syncMsg)
+        mySide = if (amHost == true) hostSide else joinerSide
+        val starterChar = starterSide.name
+        val hostChar = hostSide.name
+        val joinerChar = joinerSide.name
+        val syncLine = "SYNC:$starterChar:$hostChar:$joinerChar"
+        send(syncLine)
+        send("READY")
+        _incoming.tryEmit(syncLine)
         _incoming.tryEmit("READY")
     }
+
+    fun chosenStarter(): Player = starterSide
+    fun chosenLocalSide(): Player = mySide
 
     fun send(line: String) {
         writer?.println(line)
@@ -204,9 +196,5 @@ object P2PSession {
         writer = null
         amHost = null
         _connected.value = false
-        chosenLocked = false
     }
-
-    fun chosenStarter(): Player = starterPlayer
-    fun chosenLocalSide(): Player = localPlayerSide
 }

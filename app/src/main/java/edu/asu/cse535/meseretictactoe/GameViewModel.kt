@@ -48,12 +48,19 @@ class GameViewModel : ViewModel() {
                         val parts = msg.split(":")
                         val starterFromSync =
                             if (parts.getOrNull(1) == "X") Player.X else Player.O
-                        val localSideStr = parts.getOrNull(2)
+                        val hostSideStr = parts.getOrNull(2) ?: "X"
+                        val joinerSideStr = parts.getOrNull(3) ?: "O"
+
                         val mySide =
-                            if (localSideStr == "X") Player.X else Player.O
+                            if (P2PSession.amHost == true) {
+                                if (hostSideStr == "X") Player.X else Player.O
+                            } else {
+                                if (joinerSideStr == "X") Player.X else Player.O
+                            }
 
                         settings = settings.copy(
                             opponent = Opponent.HUMAN_BT,
+                            difficulty = settings.difficulty,
                             starter = starterFromSync,
                             localSide = mySide
                         )
@@ -81,8 +88,11 @@ class GameViewModel : ViewModel() {
                 )
             }
             Opponent.HUMAN_BT -> {
-                settings = s.copy(
-                    opponent = Opponent.HUMAN_BT
+                settings = settings.copy(
+                    opponent = Opponent.HUMAN_BT,
+                    difficulty = s.difficulty,
+                    starter = s.starter,
+                    localSide = s.localSide
                 )
             }
         }
@@ -112,20 +122,25 @@ class GameViewModel : ViewModel() {
     fun tap(index: Int) {
         if (_ui.value.outcome != Outcome.ONGOING) return
         val cur = _ui.value.state
+
         if (settings.opponent == Opponent.HUMAN_BT) {
             if (cur.playerToMove != settings.localSide) {
                 return
             }
         }
+
         if (index !in cur.moves()) return
         val next = cur.place(index)
         evaluateAfterMove(cur, next)
-        if (settings.opponent == Opponent.AI &&
+
+        if (
+            settings.opponent == Opponent.AI &&
             _ui.value.outcome == Outcome.ONGOING &&
             _ui.value.state.playerToMove == aiSide
         ) {
             aiMove()
         }
+
         if (settings.opponent == Opponent.HUMAN_BT) {
             P2PSession.send("MOVE:$index")
         }

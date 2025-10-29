@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.flow.collectLatest
 
 enum class ConnectMode { BLUETOOTH, LAN }
 
@@ -93,17 +94,15 @@ private fun PurplePrimaryButton(
 }
 
 @Composable
-private fun SelectChipLikeFirstScreen(
+private fun SelectChip(
     text: String,
     selected: Boolean,
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(12.dp)
-
     val borderColor =
         if (selected) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.outlineVariant
-
     val bgBrush =
         if (selected) {
             Brush.verticalGradient(
@@ -165,18 +164,16 @@ private fun SelectChipLikeFirstScreen(
 }
 
 @Composable
-private fun SmallChoiceChipMeOpponent(
+private fun FirstTurnChip(
     text: String,
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(12.dp)
-
     val borderColor =
         if (selected) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.outlineVariant
-
     val bgBrush =
         if (selected) {
             Brush.verticalGradient(
@@ -243,8 +240,7 @@ private fun SmallChoiceChipMeOpponent(
 @Composable
 fun P2PGameScreen(
     nav: NavHostController,
-    gameVm: GameViewModel,
-    p2pVm: P2PGameViewModel
+    gameVm: GameViewModel
 ) {
     val ctx = LocalContext.current
 
@@ -271,9 +267,8 @@ fun P2PGameScreen(
     }
 
     var status by remember { mutableStateOf("Not connected") }
-
     var showJoinPicker by remember { mutableStateOf(false) }
-    var bonded by remember { mutableStateOf(BluetoothP2P.bondedDevices(ctx)) }
+    var bonded by remember { mutableStateOf(listOf<Pair<String, String>>()) }
 
     var mode by remember {
         mutableStateOf(
@@ -292,13 +287,17 @@ fun P2PGameScreen(
     var choiceMessage by remember { mutableStateOf("") }
 
     var isConnected by remember { mutableStateOf(false) }
-
     var showNotConnectedDialog by remember { mutableStateOf(false) }
-
     var errorText by remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(granted) {
+        if (granted) {
+            bonded = BluetoothP2P.bondedDevices(ctx)
+        }
+    }
+
     LaunchedEffect(Unit) {
-        P2PSession.connected.collect { ok ->
+        P2PSession.connected.collectLatest { ok ->
             isJoining = false
             isConnected = ok
             status = if (ok) "Connected" else "Not connected"
@@ -306,34 +305,59 @@ fun P2PGameScreen(
     }
 
     LaunchedEffect(Unit) {
-        P2PSession.incoming.collect { msg ->
-            when (msg) {
-                "LOCK:YOU_FIRST" -> {
+        P2PSession.incoming.collectLatest { msg ->
+            when {
+                msg.startsWith("LOCKSET:") -> {
+                    val parts = msg.split(":")
+                    val starterStr = parts.getOrNull(1) ?: "X"
+                    val hostStr = parts.getOrNull(2) ?: "X"
+                    val joinerStr = parts.getOrNull(3) ?: "O"
+
+                    P2PSession.applyLocksetFromRemote(
+                        starterStr = starterStr,
+                        hostStr = hostStr,
+                        joinerStr = joinerStr
+                    )
+
                     choiceLocked = true
-                    choiceMessage = "You chose to go first as X."
-                }
-                "LOCK:YOU_SECOND" -> {
-                    choiceLocked = true
-                    choiceMessage = "You chose to go second as O."
-                }
-                "LOCK:REMOTE_FIRST" -> {
-                    choiceLocked = true
-                    choiceMessage = "Your opponent chose to go first as X."
-                }
-                "LOCK:REMOTE_SECOND" -> {
-                    choiceLocked = true
-                    choiceMessage = "Your opponent chose to go second as O."
-                }
-                "READY" -> {
+
                     val starter = P2PSession.chosenStarter()
-                    val sideMe = P2PSession.chosenLocalSide()
+                    val mine = P2PSession.chosenLocalSide()
+                    val amStarting = (starter == mine)
+
+                    choiceMessage =
+                        if (amStarting) {
+                            "You will go first as ${mine.name}."
+                        } else {
+                            "Your opponent will go first as ${starter.name}. You will go second as ${mine.name}."
+                        }
+                }
+
+                msg.startsWith("SYNC:") -> {
+                    val parts = msg.split(":")
+                    val starterSide =
+                        if (parts.getOrNull(1) == "X") Player.X else Player.O
+                    val hostSideStr = parts.getOrNull(2) ?: "X"
+                    val joinerSideStr = parts.getOrNull(3) ?: "O"
+
+                    val localSide =
+                        if (P2PSession.amHost == true) {
+                            if (hostSideStr == "X") Player.X else Player.O
+                        } else {
+                            if (joinerSideStr == "X") Player.X else Player.O
+                        }
+
                     val newSettings = GameSettings(
                         opponent = Opponent.HUMAN_BT,
                         difficulty = Difficulty.EASY,
-                        starter = starter,
-                        localSide = sideMe
+                        starter = starterSide,
+                        localSide = localSide
                     )
                     gameVm.applySettings(newSettings)
+                    gameVm.reset()
+                }
+
+                msg == "READY" -> {
                     nav.navigate(AppRoute.MAIN.name)
                 }
             }
@@ -341,7 +365,7 @@ fun P2PGameScreen(
     }
 
     LaunchedEffect(Unit) {
-        P2PSession.errors.collect { msg ->
+        P2PSession.errors.collectLatest { msg ->
             isJoining = false
             errorText = msg
         }
@@ -368,7 +392,7 @@ fun P2PGameScreen(
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    TextButton(onClick = { nav.goBack() }) { Text("Back") }
+                    TextButton(onClick = { nav.popBackStack() }) { Text("Back") }
                 }
             )
         },
@@ -403,15 +427,15 @@ fun P2PGameScreen(
                         Alignment.CenterHorizontally
                     )
                 ) {
-                    SelectChipLikeFirstScreen(
+                    SelectChip(
                         text = "Bluetooth",
                         selected = (mode == ConnectMode.BLUETOOTH)
                     ) {
                         mode = ConnectMode.BLUETOOTH
                     }
 
-                    SelectChipLikeFirstScreen(
-                        text = "Local Network",
+                    SelectChip(
+                        text = "Local Network (Emulator)",
                         selected = (mode == ConnectMode.LAN)
                     ) {
                         mode = ConnectMode.LAN
@@ -434,25 +458,45 @@ fun P2PGameScreen(
                         Alignment.CenterHorizontally
                     )
                 ) {
-                    SmallChoiceChipMeOpponent(
+                    FirstTurnChip(
                         text = "Me",
-                        selected = choiceLocked && choiceMessage.startsWith("You chose to go first"),
+                        selected = choiceLocked && P2PSession.chosenStarter() == P2PSession.chosenLocalSide(),
                         enabled = !choiceLocked
                     ) {
                         if (!choiceLocked) {
-                            P2PSession.claimMeFirst()
                             choiceLocked = true
+                            P2PSession.claimLocalFirst()
+
+                            val starter = P2PSession.chosenStarter()
+                            val mine = P2PSession.chosenLocalSide()
+                            val amStarting = (starter == mine)
+                            choiceMessage =
+                                if (amStarting) {
+                                    "You will go first as ${mine.name}."
+                                } else {
+                                    "Your opponent will go first as ${starter.name}. You will go second as ${mine.name}."
+                                }
                         }
                     }
 
-                    SmallChoiceChipMeOpponent(
+                    FirstTurnChip(
                         text = "Opponent",
-                        selected = choiceLocked && choiceMessage.startsWith("You chose to go second"),
+                        selected = choiceLocked && P2PSession.chosenStarter() != P2PSession.chosenLocalSide(),
                         enabled = !choiceLocked
                     ) {
                         if (!choiceLocked) {
-                            P2PSession.claimOpponentFirst()
                             choiceLocked = true
+                            P2PSession.claimRemoteFirst()
+
+                            val starter = P2PSession.chosenStarter()
+                            val mine = P2PSession.chosenLocalSide()
+                            val amStarting = (starter == mine)
+                            choiceMessage =
+                                if (amStarting) {
+                                    "You will go first as ${mine.name}."
+                                } else {
+                                    "Your opponent will go first as ${starter.name}. You will go second as ${mine.name}."
+                                }
                         }
                     }
                 }
@@ -565,7 +609,7 @@ fun P2PGameScreen(
         AlertDialog(
             onDismissRequest = { showPermDialog = false },
             title = { Text("Bluetooth permission required") },
-            text = { Text("Allow Mesere tic tac toe to connect to nearby bluetooth devices") },
+            text = { Text("Allow Misere tic tac toe to connect to nearby bluetooth devices") },
             confirmButton = {
                 TextButton(
                     onClick = {

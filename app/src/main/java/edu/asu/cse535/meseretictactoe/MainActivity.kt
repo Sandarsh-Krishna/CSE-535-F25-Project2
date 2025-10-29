@@ -3,25 +3,33 @@ package edu.asu.cse535.meseretictactoe
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        ResultsStore.init(this)
+        enableEdgeToEdge()
 
         setContent {
-            MaterialTheme {
-                Surface {
-                    val nav = rememberNavController()
-                    val vm = androidx.lifecycle.viewmodel.compose.viewModel<GameViewModel>()
-                    val p2pVm = androidx.lifecycle.viewmodel.compose.viewModel<P2PGameViewModel>()
-                    NavRoot(nav = nav, vm = vm, p2pVm = p2pVm)
-                }
-            }
+            AppRoot()
         }
+    }
+}
+
+@Composable
+fun AppRoot() {
+    val navController = rememberNavController()
+    val gameVm: GameViewModel = viewModel()
+
+    Surface(color = MaterialTheme.colorScheme.background) {
+        NavRoot(
+            nav = navController,
+            gameVm = gameVm
+        )
     }
 }

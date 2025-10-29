@@ -38,22 +38,23 @@ fun PastGameScreen(nav: NavHostController) {
     val fmt = remember {
         SimpleDateFormat("MMM d, yyyy • h:mm a", Locale.getDefault())
     }
+
+    val itemsDesc = remember {
+        ResultsStore.items.sortedByDescending { it.timeMillis }
+    }
+
     val bg = Brush.linearGradient(
         0f to Color(0xFFFEF3C7),
         0.5f to Color(0xFFE9D5FF),
         1f to Color(0xFFBAE6FD)
     )
 
-    val sortedItems = remember(ResultsStore.items) {
-        ResultsStore.items.sortedByDescending { it.timeMillis }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    TextButton(onClick = { nav.goBack() }) { Text("Back") }
+                    TextButton(onClick = { nav.popBackStack() }) { Text("Back") }
                 }
             )
         },
@@ -84,22 +85,31 @@ fun PastGameScreen(nav: NavHostController) {
                     contentPadding = PaddingValues(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(sortedItems) { game ->
-                        val modeOrDifficulty = if (game.difficulty == Difficulty.EASY) {
-                            "Mode: With Friends"
-                        } else {
-                            "Difficulty: ${game.difficulty.name}"
-                        }
-
+                    items(itemsDesc) { game ->
                         OutlinedCard {
                             Column(Modifier.padding(16.dp)) {
                                 Text(fmt.format(Date(game.timeMillis)))
                                 Spacer(Modifier.height(6.dp))
+
+                                val isFriendGame =
+                                    game.difficulty != Difficulty.EASY &&
+                                            game.difficulty != Difficulty.MEDIUM &&
+                                            game.difficulty != Difficulty.HARD
+
                                 Row {
-                                    Text(modeOrDifficulty.substringBefore(":" ) + ": ", fontWeight = FontWeight.Bold)
-                                    Text(modeOrDifficulty.substringAfter(": ").ifEmpty { "With Friends" })
+                                    Text(
+                                        if (isFriendGame) "Mode: "
+                                        else "Difficulty: ",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        if (isFriendGame) "With Friends"
+                                        else game.difficulty.name
+                                    )
                                 }
+
                                 Spacer(Modifier.height(2.dp))
+
                                 Row {
                                     Text("Outcome: ", fontWeight = FontWeight.Bold)
                                     val outcomeText = when (game.outcome) {
