@@ -34,6 +34,7 @@ object P2PSession {
     private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val errors = _errors.asSharedFlow()
 
+
     private var starterSide: Player = Player.X
     private var hostSide: Player = Player.X
     private var joinerSide: Player = Player.O
@@ -130,36 +131,44 @@ object P2PSession {
     }
 
     fun claimLocalFirst() {
+
+        mySide = Player.X
+        starterSide = Player.X
+
         if (amHost == true) {
-            starterSide = Player.X
+
             hostSide = Player.X
             joinerSide = Player.O
-            mySide = Player.X
         } else {
-            starterSide = Player.X
-            hostSide = Player.X
-            joinerSide = Player.O
-            mySide = Player.O
+
+            joinerSide = Player.X
+            hostSide = Player.O
         }
+
         val msg = "LOCKSET:${starterSide.name}:${hostSide.name}:${joinerSide.name}"
         send(msg)
     }
 
+
     fun claimRemoteFirst() {
+
+        mySide = Player.O
+        starterSide = Player.X
+
         if (amHost == true) {
-            starterSide = Player.O
+
             hostSide = Player.O
             joinerSide = Player.X
-            mySide = Player.O
         } else {
-            starterSide = Player.O
-            hostSide = Player.O
-            joinerSide = Player.X
-            mySide = Player.X
+
+            joinerSide = Player.O
+            hostSide = Player.X
         }
+
         val msg = "LOCKSET:${starterSide.name}:${hostSide.name}:${joinerSide.name}"
         send(msg)
     }
+
 
     fun applyLocksetFromRemote(starterStr: String, hostStr: String, joinerStr: String) {
         starterSide = if (starterStr == "X") Player.X else Player.O
@@ -167,6 +176,7 @@ object P2PSession {
         joinerSide = if (joinerStr == "X") Player.X else Player.O
         mySide = if (amHost == true) hostSide else joinerSide
     }
+
 
     fun finalizeAndSync() {
         mySide = if (amHost == true) hostSide else joinerSide

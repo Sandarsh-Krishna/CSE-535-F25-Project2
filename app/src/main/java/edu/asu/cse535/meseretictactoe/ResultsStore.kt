@@ -8,7 +8,8 @@ import java.io.File
 data class PastGame(
     val timeMillis: Long,
     val difficulty: Difficulty,
-    val outcome: Outcome
+    val outcome: Outcome,
+    val opponent: Opponent
 )
 
 object ResultsStore {
@@ -38,20 +39,27 @@ object ResultsStore {
         val c = appContext ?: return
         val f = File(c.filesDir, FILE_NAME)
         if (!f.exists()) return
+
         val text = runCatching { f.readText() }.getOrNull() ?: return
         val arr = runCatching { JSONArray(text) }.getOrNull() ?: return
+
         _items.clear()
+
         for (i in 0 until arr.length()) {
             val obj = arr.optJSONObject(i) ?: continue
+
             val t = obj.optLong("timeMillis", 0L)
             val diffStr = obj.optString("difficulty", "EASY")
             val outStr = obj.optString("outcome", "ONGOING")
+            val oppStr = obj.optString("opponent", "AI")
+
             val diff = when (diffStr) {
                 "EASY" -> Difficulty.EASY
                 "MEDIUM" -> Difficulty.MEDIUM
                 "HARD" -> Difficulty.HARD
                 else -> Difficulty.EASY
             }
+
             val out = when (outStr) {
                 "X_LOSES" -> Outcome.X_LOSES
                 "O_LOSES" -> Outcome.O_LOSES
@@ -59,11 +67,20 @@ object ResultsStore {
                 "ONGOING" -> Outcome.ONGOING
                 else -> Outcome.ONGOING
             }
+
+            val opp = when (oppStr) {
+                "AI" -> Opponent.AI
+                "HUMAN_LOCAL" -> Opponent.HUMAN_LOCAL
+                "HUMAN_BT" -> Opponent.HUMAN_BT
+                else -> Opponent.AI
+            }
+
             _items.add(
                 PastGame(
                     timeMillis = t,
                     difficulty = diff,
-                    outcome = out
+                    outcome = out,
+                    opponent = opp
                 )
             )
         }
@@ -72,14 +89,19 @@ object ResultsStore {
     private fun saveToDisk() {
         val c = appContext ?: return
         val f = File(c.filesDir, FILE_NAME)
+
         val arr = JSONArray()
         for (pg in _items) {
             val obj = JSONObject()
             obj.put("timeMillis", pg.timeMillis)
             obj.put("difficulty", pg.difficulty.name)
             obj.put("outcome", pg.outcome.name)
+            obj.put("opponent", pg.opponent.name)
             arr.put(obj)
         }
-        runCatching { f.writeText(arr.toString()) }
+
+        runCatching {
+            f.writeText(arr.toString())
+        }
     }
 }

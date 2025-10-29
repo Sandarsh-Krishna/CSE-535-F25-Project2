@@ -14,18 +14,3 @@ private fun hasThree(board: List<Cell>, c: Cell): Boolean =
     LINES.any { (a, b, d) -> board[a] == c && board[b] == c && board[d] == c }
 
 
-/*fun outcomeAfterMove(prev: GameState, nextState: GameState): Outcome {
-    val mover = prev.next
-    val moverCell = if (mover == Player.X) Cell.X else Cell.O
-
-
-    if (hasThree(nextState.board, moverCell)) {
-        return if (mover == Player.X) Outcome.X_LOSES else Outcome.O_LOSES
-    }
-
-
-    if (nextState.board.none { it == Cell.E }) return Outcome.DRAW
-
-
-    return Outcome.ONGOING
-}*/

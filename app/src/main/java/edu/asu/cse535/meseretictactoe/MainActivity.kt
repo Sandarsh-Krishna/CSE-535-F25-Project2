@@ -15,6 +15,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+
+        ResultsStore.init(applicationContext)
+
         setContent {
             AppRoot()
         }

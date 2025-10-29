@@ -54,7 +54,12 @@ fun PastGameScreen(nav: NavHostController) {
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    TextButton(onClick = { nav.popBackStack() }) { Text("Back") }
+                    TextButton(onClick = { nav.popBackStack() }) {
+                        Text(
+                            "Back",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             )
         },
@@ -72,10 +77,12 @@ fun PastGameScreen(nav: NavHostController) {
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
                 Text(
                     text = "Past Games",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF111827)
                 )
 
                 Spacer(Modifier.height(12.dp))
@@ -88,37 +95,67 @@ fun PastGameScreen(nav: NavHostController) {
                     items(itemsDesc) { game ->
                         OutlinedCard {
                             Column(Modifier.padding(16.dp)) {
-                                Text(fmt.format(Date(game.timeMillis)))
+
+
+                                Text(
+                                    fmt.format(Date(game.timeMillis)),
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF1F2937)
+                                )
                                 Spacer(Modifier.height(6.dp))
 
-                                val isFriendGame =
-                                    game.difficulty != Difficulty.EASY &&
-                                            game.difficulty != Difficulty.MEDIUM &&
-                                            game.difficulty != Difficulty.HARD
+                                val isAiGame = (game.opponent == Opponent.AI)
+
 
                                 Row {
                                     Text(
-                                        if (isFriendGame) "Mode: "
-                                        else "Difficulty: ",
-                                        fontWeight = FontWeight.Bold
+                                        text = if (isAiGame) "Difficulty: " else "Mode: ",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF111827)
                                     )
                                     Text(
-                                        if (isFriendGame) "With Friends"
-                                        else game.difficulty.name
+                                        text = if (isAiGame)
+                                            game.difficulty.name
+                                        else
+                                            "With Friends",
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF1F2937)
                                     )
                                 }
 
                                 Spacer(Modifier.height(2.dp))
 
+
                                 Row {
-                                    Text("Outcome: ", fontWeight = FontWeight.Bold)
-                                    val outcomeText = when (game.outcome) {
-                                        Outcome.DRAW -> "Draw"
-                                        Outcome.X_LOSES -> "O wins"
-                                        Outcome.O_LOSES -> "X wins"
-                                        Outcome.ONGOING -> "Ongoing"
+                                    Text(
+                                        text = "Outcome: ",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF111827)
+                                    )
+
+
+                                    val outcomeText = if (isAiGame) {
+                                        when (game.outcome) {
+                                            Outcome.DRAW -> "Draw"
+                                            Outcome.O_LOSES -> "You win"   // X wins, and local player is X vs AI
+                                            Outcome.X_LOSES -> "AI wins"   // O wins
+                                            Outcome.ONGOING -> "Ongoing"
+                                        }
+                                    } else {
+
+                                        when (game.outcome) {
+                                            Outcome.DRAW -> "Draw"
+                                            Outcome.O_LOSES -> "X wins"
+                                            Outcome.X_LOSES -> "O wins"
+                                            Outcome.ONGOING -> "Ongoing"
+                                        }
                                     }
-                                    Text(outcomeText)
+
+                                    Text(
+                                        outcomeText,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF1F2937)
+                                    )
                                 }
                             }
                         }

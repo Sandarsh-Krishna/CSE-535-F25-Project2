@@ -20,11 +20,21 @@ data class GameSettings(
 
 data class UiState(
     val state: GameState = GameState(),
-    val outcome: Outcome = Outcome.ONGOING
+    val outcome: Outcome = Outcome.ONGOING,
+    val difficulty: Difficulty = Difficulty.EASY,
+    val opponent: Opponent = Opponent.AI
 )
 
 class GameViewModel : ViewModel() {
-    private val _ui = MutableStateFlow(UiState())
+
+    private val _ui = MutableStateFlow(
+        UiState(
+            state = GameState(),
+            outcome = Outcome.ONGOING,
+            difficulty = Difficulty.EASY,
+            opponent = Opponent.AI
+        )
+    )
     val ui: StateFlow<UiState> = _ui
 
     var settings: GameSettings = GameSettings()
@@ -41,9 +51,11 @@ class GameViewModel : ViewModel() {
                         val idx = msg.removePrefix("MOVE:").toIntOrNull() ?: return@collectLatest
                         applyPeerMove(idx)
                     }
+
                     msg == "RESET" -> {
                         resetInternal(sync = false)
                     }
+
                     msg.startsWith("SYNC:") -> {
                         val parts = msg.split(":")
                         val starterFromSync =
@@ -64,6 +76,14 @@ class GameViewModel : ViewModel() {
                             starter = starterFromSync,
                             localSide = mySide
                         )
+
+                        _ui.update {
+                            it.copy(
+                                difficulty = settings.difficulty,
+                                opponent = settings.opponent
+                            )
+                        }
+
                         resetInternal(sync = false)
                     }
                 }
@@ -80,6 +100,7 @@ class GameViewModel : ViewModel() {
                     opponent = Opponent.AI
                 )
             }
+
             Opponent.HUMAN_LOCAL -> {
                 settings = s.copy(
                     starter = Player.X,
@@ -87,6 +108,7 @@ class GameViewModel : ViewModel() {
                     opponent = Opponent.HUMAN_LOCAL
                 )
             }
+
             Opponent.HUMAN_BT -> {
                 settings = settings.copy(
                     opponent = Opponent.HUMAN_BT,
@@ -96,11 +118,24 @@ class GameViewModel : ViewModel() {
                 )
             }
         }
+
+        _ui.update {
+            it.copy(
+                difficulty = settings.difficulty,
+                opponent = settings.opponent
+            )
+        }
     }
 
     fun setDifficulty(newDiff: Difficulty) {
         if (settings.opponent == Opponent.AI) {
             settings = settings.copy(difficulty = newDiff)
+            _ui.update {
+                it.copy(
+                    difficulty = settings.difficulty,
+                    opponent = settings.opponent
+                )
+            }
         }
     }
 
@@ -110,10 +145,14 @@ class GameViewModel : ViewModel() {
         val startPlayer =
             if (settings.opponent == Opponent.AI) Player.X
             else settings.starter
+
         _ui.value = UiState(
             state = GameState(playerToMove = startPlayer),
-            outcome = Outcome.ONGOING
+            outcome = Outcome.ONGOING,
+            difficulty = settings.difficulty,
+            opponent = settings.opponent
         )
+
         if (sync && settings.opponent == Opponent.HUMAN_BT) {
             P2PSession.send("RESET")
         }
@@ -157,13 +196,23 @@ class GameViewModel : ViewModel() {
     private fun evaluateAfterMove(prev: GameState, next: GameState) {
         val mover = prev.playerToMove
         val outcome = MisereRules.outcomeAfter(next, mover)
-        _ui.update { it.copy(state = next, outcome = outcome) }
+
+        _ui.update {
+            it.copy(
+                state = next,
+                outcome = outcome,
+                difficulty = settings.difficulty,
+                opponent = settings.opponent
+            )
+        }
+
         if (outcome != Outcome.ONGOING) {
             ResultsStore.add(
                 PastGame(
                     timeMillis = System.currentTimeMillis(),
                     difficulty = settings.difficulty,
-                    outcome = outcome
+                    outcome = outcome,
+                    opponent = settings.opponent
                 )
             )
         }
@@ -173,11 +222,13 @@ class GameViewModel : ViewModel() {
         val cur = _ui.value.state
         val legal = cur.moves()
         if (legal.isEmpty()) return
+
         val i = when (settings.difficulty) {
             Difficulty.EASY -> easyMove(cur)
             Difficulty.MEDIUM -> mediumMove(cur)
             Difficulty.HARD -> hardMove(cur)
         }
+
         val next = cur.place(i)
         evaluateAfterMove(cur, next)
     }
@@ -217,10 +268,11 @@ class GameViewModel : ViewModel() {
             Outcome.X_LOSES -> return if (justMoved == Player.X) +1 else -1
             Outcome.O_LOSES -> return if (justMoved == Player.O) +1 else -1
             Outcome.DRAW -> return 0
-            Outcome.ONGOING -> { }
+            Outcome.ONGOING -> { /* keep searching */ }
         }
         val key = Pair(state.board, state.playerToMove)
         memo[key]?.let { return it }
+
         var best = Int.MIN_VALUE
         for (i in state.moves()) {
             val s2 = state.place(i)
