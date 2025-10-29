@@ -1,6 +1,8 @@
 package edu.asu.cse535.meseretictactoe
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -45,6 +47,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.foundation.Canvas
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,22 +63,42 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
     var localDifficulty by remember { mutableStateOf(settingsSnapshot.difficulty) }
 
     val bg = Brush.linearGradient(
-        0f to Color(0xFFFEF3C7),
-        0.5f to Color(0xFFE9D5FF),
-        1f to Color(0xFFBAE6FD)
+        colors = listOf(Luxe.bgStart, Luxe.bgEnd),
+        start = Offset(0f, 0f),
+        end = Offset(1200f, 2200f)
     )
-
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bg)
+    ){
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {},
+            // CHANGE: Center title, transparent bar for a cleaner hierarchy
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        "Game",
+                        fontWeight = FontWeight.SemiBold,
+                        color = Luxe.textPrimary // CHANGE: ensure contrast on dark bg
+                    )
+                },
                 navigationIcon = {
-                    TextButton(onClick = { nav.goBack() }) { Text("Back") }
+                    TextButton(onClick = { nav.goBack() }) {
+                        Text("Back", color = Luxe.textPrimary)
+                    }
                 },
                 actions = {
-                    TextButton(onClick = { nav.navigate(AppRoute.PAST.name) }) { Text("Past") }
-                    TextButton(onClick = { nav.navigate(AppRoute.MODE_SELECT.name) }) { Text("Mode") }
-                }
+                    TextButton(onClick = { nav.navigate(AppRoute.PAST.name) }) {
+                        Text("Past", color = Luxe.textPrimary)
+                    }
+                    TextButton(onClick = { nav.navigate(AppRoute.MODE_SELECT.name) }) {
+                        Text("Mode", color = Luxe.textPrimary)
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
         },
         containerColor = Color.Transparent
@@ -79,15 +106,15 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(pad)
-                .background(bg),
+                .padding(pad),
             contentAlignment = Alignment.Center
         ) {
             Surface(
                 shape = RoundedCornerShape(24.dp),
-                tonalElevation = 6.dp,
+                color = Luxe.glass, // CHANGE
+                tonalElevation = 0.dp,
                 shadowElevation = 0.dp,
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                border = BorderStroke(1.dp, Luxe.glassBorder), // CHANGE
                 modifier = Modifier
                     .padding(horizontal = 20.dp)
                     .wrapContentHeight()
@@ -99,9 +126,12 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
                 ) {
                     Text(
                         "Misère Tic-Tac-Toe",
+
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        color = Luxe.textPrimary,
+                        letterSpacing = 0.2.sp,
                     )
 
                     Spacer(Modifier.height(12.dp))
@@ -130,6 +160,7 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
                             text = "You are $me • Opponent is $them",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
+                            color = Luxe.textPrimary,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -142,6 +173,7 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
 
                     Board(
                         board = ui.state.board,
+
                         enabled =
                             ui.outcome == Outcome.ONGOING &&
                                     (aiSide == null || ui.state.playerToMove != aiSide) &&
@@ -163,6 +195,7 @@ fun GameScreen(vm: GameViewModel, nav: NavHostController) {
             }
         }
     }
+    }
 }
 
 @Composable
@@ -183,9 +216,9 @@ private fun ModePill(
     val shape = RoundedCornerShape(999.dp)
     Surface(
         shape = shape,
-        color = Color(0xFFDCFCE7),
+        color = Color.Transparent,
         contentColor = Color(0xFF065F46),
-        border = BorderStroke(1.dp, Color(0xFF10B981))
+        border = BorderStroke(1.dp, Luxe.chipOutline)
     ) {
         Text(
             text = label,
@@ -201,7 +234,7 @@ private fun DifficultyRow(
     onSelect: (Difficulty) -> Unit
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         SelectableChip(
@@ -229,39 +262,28 @@ private fun SelectableChip(
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(12.dp)
-    val borderColor = MaterialTheme.colorScheme.primary
-    val bgColors = if (active) {
-        Brush.verticalGradient(
-            listOf(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-            )
-        )
+    val bg = if (active) {
+        Brush.horizontalGradient(listOf(Luxe.accent1.copy(alpha = 0.9f), Luxe.accent2.copy(alpha = 0.9f)))
     } else {
-        Brush.verticalGradient(
-            listOf(
-                Color.Transparent,
-                Color.Transparent
-            )
-        )
+        Brush.horizontalGradient(listOf(Color.Transparent, Color.Transparent))
     }
+
+    val borderCol = if (active) Luxe.accent2 else Luxe.chipOutline
     Surface(
-        modifier = Modifier
-            .clickable { onClick() },
+        modifier = Modifier.clickable { onClick() },
         shape = shape,
-        border = BorderStroke(1.dp, borderColor),
+        border = BorderStroke(1.dp, borderCol),
         color = Color.Transparent
     ) {
         Box(
             modifier = Modifier
-                .background(bgColors, shape)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .background(bg, shape)
+                .padding(horizontal = 14.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = label,
-                color = if (active) MaterialTheme.colorScheme.onPrimary
-                else MaterialTheme.colorScheme.primary,
+                color = if (active) Color.White else Luxe.textPrimary, // CHANGE
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -278,27 +300,24 @@ private fun PrimaryButton(
         modifier = Modifier
             .clickable { onClick() },
         shape = shape,
-        border = BorderStroke(1.dp, Color(0xFF4C3A8C)),
+        border = BorderStroke(1.dp, Color(0x334C3A8C)),
         color = Color.Transparent
     ) {
         Box(
             modifier = Modifier
+
                 .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF5B4BB8),
-                            Color(0xFF4A3797)
-                        )
-                    ),
+                    Brush.horizontalGradient(listOf(Luxe.accent1, Luxe.accent2)),
                     shape
                 )
-                .padding(horizontal = 20.dp, vertical = 10.dp),
+                .padding(horizontal = 22.dp, vertical = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 label,
                 color = Color.White,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.2.sp
             )
         }
     }
@@ -314,9 +333,9 @@ private fun TurnChip(player: Player) {
     val shape = RoundedCornerShape(12.dp)
     Surface(
         shape = shape,
-        color = bg,
-        contentColor = fg,
-        border = BorderStroke(1.dp, borderC)
+        color = Color(0x26FFFFFF),
+        contentColor = Luxe.textPrimary,
+        border = BorderStroke(1.dp, Luxe.tileBorder)
     ) {
         Text(
             text = "Turn: $player",
@@ -332,7 +351,7 @@ private fun Board(
     enabled: Boolean,
     onTap: (Int) -> Unit
 ) {
-    val tileColor = Color(0xFFF5F3FF)
+    val tileColor = Luxe.tileFill
     val gap = 12.dp
 
     BoxWithConstraints(
@@ -391,7 +410,7 @@ private fun Tile(
 
     val scale = if (pressed) 0.98f else 1f
 
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(18.dp)
     OutlinedCard(
         modifier = Modifier
             .size(size)
@@ -405,30 +424,73 @@ private fun Tile(
                 } else it
             },
         shape = shape,
-        border = BorderStroke(2.dp, Color.White.copy(alpha = 0.8f)),
+        border = BorderStroke(1.5.dp, Luxe.tileBorder),
         colors = CardDefaults.outlinedCardColors(
-            containerColor = color.copy(alpha = 0.95f)
+            containerColor = color
         )
     ) {
         Box(
             Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            val txtColor = if (label == "X")
-                Color(0xFFEF4444)
-            else
-                Color(0xFF3B82F6)
+            XOIcon(label = label, boxSize = size)
+        }
+    }
+}
+@Composable
+private fun XOIcon(label: String, boxSize: Dp) {
+    if (label.isEmpty()) return
+    Canvas(modifier = Modifier.size(boxSize)) {
+        val s = size.minDimension
+        val stroke = s * 0.09f
+        val shadow = stroke * 1.8f
+        val pad = s * 0.22f
+        if (label == "X") {
+            val start1 = Offset(pad, pad)
+            val end1   = Offset(s - pad, s - pad)
+            val start2 = Offset(pad, s - pad)
+            val end2   = Offset(s - pad, pad)
 
-            Text(
-                text = label,
-                fontSize = 36.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = txtColor
+            drawLine(
+                color = Color.Black.copy(alpha = 0.25f),
+                start = start1, end = end1,
+                strokeWidth = shadow, cap = StrokeCap.Round
+            )
+            drawLine(
+                color = Color.Black.copy(alpha = 0.25f),
+                start = start2, end = end2,
+                strokeWidth = shadow, cap = StrokeCap.Round
+            )
+
+            drawLine(
+                color = Luxe.xColor,
+                start = start1, end = end1,
+                strokeWidth = stroke, cap = StrokeCap.Round
+            )
+            drawLine(
+                color = Luxe.xColor,
+                start = start2, end = end2,
+                strokeWidth = stroke, cap = StrokeCap.Round
+            )
+        }
+        else {
+
+            val r = (s / 2f) - pad
+
+            drawCircle(
+                color = Color.Black.copy(alpha = 0.25f),
+                radius = r + stroke * 0.4f,
+                style = Stroke(width = shadow, cap = StrokeCap.Round)
+            )
+
+            drawCircle(
+                color = Luxe.oColor,
+                radius = r,
+                style = Stroke(width = stroke, cap = StrokeCap.Round)
             )
         }
     }
 }
-
 @Composable
 private fun ResultBanner(
     outcome: Outcome,
@@ -444,9 +506,9 @@ private fun ResultBanner(
     }
 
     val (bg, fg) = when (friendly) {
-        "Computer wins" -> Color(0xFFFFE4E6) to Color(0xFF991B1B)
-        "You win"       -> Color(0xFFE0EAFF) to Color(0xFF1D4ED8)
-        "Result: Draw"  -> Color(0xFFE5E7EB) to Color(0xFF111827)
+        "Computer wins" -> Color(0x26FFFFFF) to Luxe.textPrimary
+        "You win"       -> Color(0x26FFFFFF) to Luxe.textPrimary
+        "Result: Draw"  -> Color(0x1AFFFFFF) to Luxe.textMuted
         else            -> Color.Transparent to Color.Unspecified
     }
 
@@ -456,9 +518,7 @@ private fun ResultBanner(
             shape = shape,
             color = bg,
             contentColor = fg,
-            border = if (bg != Color.Transparent)
-                BorderStroke(1.dp, fg.copy(alpha = 0.25f))
-            else null
+            border = BorderStroke(1.dp, Luxe.tileBorder)
         ) {
             Text(
                 text = friendly,

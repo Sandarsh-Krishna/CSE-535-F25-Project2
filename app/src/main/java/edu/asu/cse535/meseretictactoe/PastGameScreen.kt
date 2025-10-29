@@ -31,6 +31,14 @@ import androidx.navigation.NavHostController
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Surface
+import androidx.compose.material3.CardDefaults
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,22 +47,31 @@ fun PastGameScreen(nav: NavHostController) {
         SimpleDateFormat("MMM d, yyyy • h:mm a", Locale.getDefault())
     }
     val bg = Brush.linearGradient(
-        0f to Color(0xFFFEF3C7),
-        0.5f to Color(0xFFE9D5FF),
-        1f to Color(0xFFBAE6FD)
+        colors = listOf(Luxe.bgStart, Luxe.bgEnd),
+        start = Offset(0f, 0f),
+        end = Offset(1200f, 2200f)
     )
 
     val sortedItems = remember(ResultsStore.items) {
         ResultsStore.items.sortedByDescending { it.timeMillis }
     }
-
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bg)
+    ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {},
+            CenterAlignedTopAppBar(
+                title = { Text("Past Games", color = Luxe.textPrimary, fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    TextButton(onClick = { nav.goBack() }) { Text("Back") }
-                }
+                    TextButton(onClick = { nav.goBack() }) {
+                        Text("Back", color = Luxe.textPrimary)
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
         },
         containerColor = Color.Transparent
@@ -63,20 +80,24 @@ fun PastGameScreen(nav: NavHostController) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(pad)
-                .background(bg)
+
         ) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = Luxe.glass,
+                border = BorderStroke(1.dp, Luxe.glassBorder),
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+                modifier = Modifier
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .fillMaxSize()
+            ){
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "Past Games",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold
-                )
-
                 Spacer(Modifier.height(12.dp))
 
                 LazyColumn(
@@ -91,30 +112,59 @@ fun PastGameScreen(nav: NavHostController) {
                             "Difficulty: ${game.difficulty.name}"
                         }
 
-                        OutlinedCard {
+                        OutlinedCard(
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, Luxe.tileBorder),
+                            colors = CardDefaults.outlinedCardColors(
+                                containerColor = Luxe.tileFill
+                            ),
+                        ) {
                             Column(Modifier.padding(16.dp)) {
-                                Text(fmt.format(Date(game.timeMillis)))
+                                Text(
+                                    fmt.format(Date(game.timeMillis)),
+                                    color = Luxe.textPrimary, // CHANGE
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
                                 Spacer(Modifier.height(6.dp))
+
                                 Row {
-                                    Text(modeOrDifficulty.substringBefore(":" ) + ": ", fontWeight = FontWeight.Bold)
-                                    Text(modeOrDifficulty.substringAfter(": ").ifEmpty { "With Friends" })
+                                    Text(
+                                        modeOrDifficulty.substringBefore(":") + ": ",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Luxe.textPrimary // CHANGE
+                                    )
+                                    Text(
+                                        modeOrDifficulty.substringAfter(": ")
+                                            .ifEmpty { "With Friends" },
+                                        color = Luxe.textPrimary // CHANGE
+                                    )
                                 }
-                                Spacer(Modifier.height(2.dp))
+                                Spacer(Modifier.height(4.dp))
+
                                 Row {
-                                    Text("Outcome: ", fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "Outcome: ",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Luxe.textPrimary // CHANGE
+                                    )
                                     val outcomeText = when (game.outcome) {
                                         Outcome.DRAW -> "Draw"
                                         Outcome.X_LOSES -> "O wins"
                                         Outcome.O_LOSES -> "X wins"
                                         Outcome.ONGOING -> "Ongoing"
                                     }
-                                    Text(outcomeText)
+                                    Text(outcomeText, color = Luxe.textPrimary)
                                 }
                             }
                         }
+                            }
+                        }
+
                     }
                 }
             }
         }
     }
+
 }
