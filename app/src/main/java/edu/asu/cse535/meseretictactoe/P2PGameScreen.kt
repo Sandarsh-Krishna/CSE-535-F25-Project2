@@ -244,12 +244,6 @@ fun P2PGameScreen(
     val ctx = LocalContext.current
 
 
-    DisposableEffect(Unit) {
-        onDispose {
-            P2PSession.close()
-        }
-    }
-
     val permissionList = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(
