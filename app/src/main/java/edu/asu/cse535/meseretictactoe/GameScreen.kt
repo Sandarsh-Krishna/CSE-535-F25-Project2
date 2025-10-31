@@ -251,6 +251,17 @@ fun GameScreen(
                             Spacer(Modifier.height(16.dp))
                         }
 
+                        if (ui.opponent == Opponent.HUMAN_BT) {
+                            NewGameButton(
+                                label = "Choose Starter",
+                                onClick = {
+
+                                    nav.navigate(AppRoute.P2P.name)
+                                }
+                            )
+                            Spacer(Modifier.height(12.dp))
+                        }
+
                         NewGameButton(
                             label = if (isFinished) "Play Again" else "New Game",
                             onClick = { vm.reset() }
