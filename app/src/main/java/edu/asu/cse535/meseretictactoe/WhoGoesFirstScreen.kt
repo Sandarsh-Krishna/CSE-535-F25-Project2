@@ -77,11 +77,7 @@ fun WhoGoesFirstScreen(
                             nav.popBackStack()
                         }
                     ) {
-                        Text(
-                            "Back",
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFF8FAFC)
-                        )
+                        
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
