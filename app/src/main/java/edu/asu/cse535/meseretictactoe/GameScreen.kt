@@ -35,7 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-
+import androidx.compose.material3.TopAppBarDefaults
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
@@ -44,10 +44,12 @@ fun GameScreen(
 ) {
     val ui by vm.ui.collectAsState()
 
-    val gradientBg = Brush.linearGradient(
-        0f to Color(0xFFFEF3C7),
-        0.5f to Color(0xFFE9D5FF),
-        1f to Color(0xFFBAE6FD)
+    val gradientBg = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFF0F172A),
+            Color(0xFF141A3A),
+            Color(0xFF3B1A78)
+        )
     )
 
     val localIsMyTurn =
@@ -118,7 +120,7 @@ fun GameScreen(
                         Text(
                             "Back",
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF111827)
+                            color = Color(0xFFF8FAFC)
                         )
                     }
                 },
@@ -129,7 +131,7 @@ fun GameScreen(
                         Text(
                             "Past",
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF111827)
+                            color = Color(0xFFF8FAFC)
                         )
                     }
                     TextButton(onClick = {
@@ -138,13 +140,19 @@ fun GameScreen(
                         Text(
                             "Mode",
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF111827)
+                            color = Color(0xFFF8FAFC)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF0F172A),
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                )
             )
         },
-        containerColor = Color.Transparent
+        containerColor = Color.Transparent,
+        modifier = Modifier.background(gradientBg)
     ) { pad ->
         Box(
             modifier = Modifier
@@ -157,7 +165,7 @@ fun GameScreen(
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 24.dp)
                     .fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(24.dp),
                 color = Color.Transparent,
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp,
@@ -166,17 +174,17 @@ fun GameScreen(
                     modifier = Modifier
                         .border(
                             width = 1.dp,
-                            color = Color(0xFFD1D5DB),
-                            shape = RoundedCornerShape(12.dp)
+                            color = Color.White.copy(alpha = 0.05f),
+                            shape = RoundedCornerShape(24.dp)
                         )
                         .background(
                             brush = Brush.verticalGradient(
                                 listOf(
-                                    Color(0xFFFDFDFE),
-                                    Color(0xFFF3F4F6)
+                                    Color(0xFF0F172A).copy(alpha = 0.35f),
+                                    Color(0xFF0F172A).copy(alpha = 0.15f)
                                 )
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(24.dp)
                         )
                         .padding(horizontal = 16.dp, vertical = 20.dp)
                 ) {
@@ -190,7 +198,7 @@ fun GameScreen(
                             "Misère Tic-Tac-Toe",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF111827),
+                            color = Color.White,
                             textAlign = TextAlign.Center
                         )
 
@@ -198,14 +206,14 @@ fun GameScreen(
 
                         PillChip(
                             text = modeChipText,
-                            bgGradient = Brush.verticalGradient(
+                            bgGradient = Brush.horizontalGradient(
                                 listOf(
-                                    Color(0xFF10B981).copy(alpha = 0.15f),
-                                    Color(0xFF10B981).copy(alpha = 0.05f)
+                                    Color(0xFF6366F1).copy(alpha = 0.12f),
+                                    Color(0xFF8B5CF6).copy(alpha = 0.12f)
                                 )
                             ),
-                            borderColor = Color(0xFF10B981),
-                            textColor = Color(0xFF065F46)
+                            borderColor = Color(0xFF6366F1).copy(alpha = 0.8f),
+                            textColor = Color(0xFFE2E8F0)
                         )
 
                         Spacer(Modifier.height(12.dp))
@@ -223,14 +231,14 @@ fun GameScreen(
 
                         PillChip(
                             text = turnChipText,
-                            bgGradient = Brush.verticalGradient(
+                            bgGradient = Brush.horizontalGradient(
                                 listOf(
-                                    Color(0xFFFFF7ED),
-                                    Color(0xFFFFF7ED).copy(alpha = 0.7f)
+                                    Color(0xFFF97316).copy(alpha = 0.15f),
+                                    Color(0xFFFBBF24).copy(alpha = 0.08f)
                                 )
                             ),
-                            borderColor = Color(0xFFF59E0B),
-                            textColor = Color(0xFF92400E)
+                            borderColor = Color(0xFFF97316).copy(alpha = 0.6f),
+                            textColor = Color(0xFFFFEDD5)
                         )
 
                         Spacer(Modifier.height(20.dp))
@@ -342,18 +350,19 @@ private fun DiffChip(
     onClick: () -> Unit
 ) {
     val borderColor = Color(0xFF4C1D95)
+    val shape = RoundedCornerShape(10.dp)
     val bgBrush = if (active) {
-        Brush.verticalGradient(
+        Brush.horizontalGradient(
             listOf(
-                Color(0xFF6D28D9).copy(alpha = 0.25f),
-                Color(0xFF6D28D9).copy(alpha = 0.15f)
+                Color(0xFF6366F1).copy(alpha = 0.2f),
+                Color(0xFF8B5CF6).copy(alpha = 0.15f)
             )
         )
     } else {
-        Brush.verticalGradient(
+        Brush.horizontalGradient(
             listOf(
-                Color(0xFFFDFDFE),
-                Color(0xFFE5E7EB)
+                Color(0xFF0F172A).copy(alpha = 0.35f),
+                Color(0xFF0F172A).copy(alpha = 0.15f)
             )
         )
     }
@@ -367,18 +376,18 @@ private fun DiffChip(
         tonalElevation = 0.dp,
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            borderColor
-        )
+            if (active) Color(0xFF6366F1) else Color(0xFF94A3B8).copy(alpha = 0.35f)
+        ),
     ) {
         Box(
             modifier = Modifier
-                .background(bgBrush, RoundedCornerShape(6.dp))
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .background(bgBrush, shape)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = label,
-                color = if (active) Color.White else Color(0xFF1F2937),
+                color = if (active) Color.White else Color(0xFFE2E8F0),
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -408,17 +417,17 @@ private fun BoardGrid(
 
                     val tileBg = Brush.verticalGradient(
                         listOf(
-                            Color(0xFFFFFFFF),
-                            Color(0xFFF3F4F6)
+                            Color(0xFF101827),
+                            Color(0xFF111827)
                         )
                     )
 
                     Box(
                         modifier = Modifier
-                            .size(88.dp)
+                            .size(90.dp)
                             .border(
                                 width = 2.dp,
-                                color = if (isHL) Color(0xFFEF4444) else Color(0xFFD1D5DB),
+                                color = if (isHL) Color(0xFFF97316) else Color(0xFF1F2937),
                                 shape = RoundedCornerShape(10.dp)
                             )
                             .background(
@@ -436,14 +445,14 @@ private fun BoardGrid(
                             Cell.O -> "O"
                         }
                         val markColor = when (cell) {
-                            Cell.X -> Color(0xFFDC2626)
-                            Cell.O -> Color(0xFF2563EB)
+                            Cell.X -> Color(0xFFF43F5E)   // pinkish red
+                            Cell.O -> Color(0xFF38BDF8)
                             Cell.EMPTY -> Color.Transparent
                         }
 
                         Text(
                             text = markText,
-                            style = MaterialTheme.typography.headlineLarge,
+                            style = MaterialTheme.typography.displayMedium,
                             fontWeight = FontWeight.Bold,
                             color = markColor,
                             textAlign = TextAlign.Center
@@ -459,10 +468,10 @@ private fun BoardGrid(
 private fun ResultChip(
     label: String
 ) {
-    val chipBg = Brush.verticalGradient(
+    val chipBg = Brush.horizontalGradient(
         listOf(
-            Color(0xFFEFF6FF),
-            Color(0xFFDDEAFE)
+            Color(0xFF6366F1).copy(alpha = 0.55f),   // was ~0.15f
+            Color(0xFF8B5CF6).copy(alpha = 0.55f)
         )
     )
 
@@ -483,9 +492,10 @@ private fun ResultChip(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = label,
-                color = Color(0xFF1E40AF),
-                fontWeight = FontWeight.Bold
+                text = label.uppercase(),
+                color = Color.White,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -497,10 +507,10 @@ private fun NewGameButton(
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(12.dp)
-    val btnBg = Brush.verticalGradient(
+    val btnBg = Brush.horizontalGradient(
         listOf(
-            Color(0xFF4F46E5),
-            Color(0xFF4338CA)
+            Color(0xFF6366F1),
+            Color(0xFF8B5CF6)
         )
     )
 
