@@ -195,11 +195,7 @@ fun PastGameScreen(nav: NavHostController) {
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Text(
-                                                text = "Outcome:",
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFE2E8F0)
-                                            )
+                                            
 
 
                                             OutcomePillCompact(outcomeText)
